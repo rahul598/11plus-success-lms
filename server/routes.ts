@@ -2,9 +2,10 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { db } from "@db";
-import { users, questions, courses, tutors, payments, studentProgress, media, achievements, rewards, studentAchievements, studentRewards, studentEngagement, mockTests, mockTestQuestions, mockTestSessions } from "@db/schema";
+import { users, questions, courses, tutors, payments, studentProgress, media, achievements, rewards, studentAchievements, studentRewards, studentEngagement, mockTests, mockTestQuestions, mockTestSessions, mockTestAnswers, events, eventParticipants, notifications } from "@db/schema";
 import { eq, desc, and, sql, not, exists } from "drizzle-orm";
 import multer from "multer";
+import { stringify } from "csv-stringify";
 
 // Configure multer for file uploads
 const upload = multer({ storage: multer.memoryStorage() });
@@ -965,7 +966,7 @@ export function registerRoutes(app: Express): Server {
 
   // Mock Test Management Routes
   app.get("/api/mock-tests", requireAuth, async (_req, res) => {
-    try {
+        try {
       const allTests = await db
         .select()
         .from(mockTests)
@@ -1027,7 +1028,7 @@ export function registerRoutes(app: Express): Server {
             })
           )
         );
-      } 
+      }
       // For mixed tests, handle the distribution across subjects
       else if (type === "mixed") {
         for (const [subject, count] of Object.entries(rules.subjectDistribution)) {
@@ -1097,6 +1098,274 @@ export function registerRoutes(app: Express): Server {
       res.status(500).send(error.message);
     }
   });
+
+  // Event Management Routes
+  app.get("/api/events", requireAuth, async (_req, res) => {
+    try {
+      const allEvents = await db
+        .select()
+        .from(events)
+        .orderBy(desc(events.startTime));
+      res.json(allEvents);
+    } catch (error: any) {
+      console.error("Error fetching events:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.post("/api/events", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+
+    try {
+      const [event] = await db
+        .insert(events)
+        .values({
+          ...req.body,
+          createdBy: req.user.id,
+        })
+        .returning();
+
+      // If the creator is not an attendee, register them as organizer
+      await db.insert(eventParticipants).values({
+        eventId: event.id,
+        userId: req.user.id,
+        role: "organizer",
+      });
+
+      // Send notifications to relevant users
+      if (event.type === "exam") {
+        const students = await db
+          .select()
+          .from(users)
+          .where(eq(users.role, "student"));
+
+        await Promise.all(
+          students.map((student) =>
+            db.insert(notifications).values({
+              userId: student.id,
+              title: `New Exam Scheduled: ${event.title}`,
+              content: `A new exam has been scheduled for ${new Date(event.startTime).toLocaleDateString()}`,
+              type: "event",
+            })
+          )
+        );
+      }
+
+      res.json(event);
+    } catch (error: any) {
+      console.error("Error creating event:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.post("/api/events/:id/register", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+
+    try {
+      const eventId = parseInt(req.params.id);
+      const [event] = await db
+        .select()
+        .from(events)
+        .where(eq(events.id, eventId))
+        .limit(1);
+
+      if (!event) {
+        return res.status(404).send("Event not found");
+      }
+
+      if (event.capacity && event.enrolledCount >= event.capacity) {
+        return res.status(400).send("Event is full");
+      }
+
+      // Register the user
+      const [registration] = await db
+        .insert(eventParticipants)
+        .values({
+          eventId,
+          userId: req.user.id,
+          role: "attendee",
+        })
+        .returning();
+
+      // Update enrolled count
+      await db
+        .update(events)
+        .set({
+          enrolledCount: sql`${events.enrolledCount} + 1`,
+        })
+        .where(eq(events.id, eventId));
+
+      res.json(registration);
+    } catch (error: any) {
+      console.error("Error registering for event:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  // Automated Result Processing Routes
+  app.post("/api/mock-tests/:sessionId/process-results", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      const [session] = await db
+        .select()
+        .from(mockTestSessions)
+        .where(eq(mockTestSessions.id, sessionId))
+        .limit(1);
+
+      if (!session) {
+        return res.status(404).send("Session not found");
+      }
+
+      // Get all answers for this session
+      const answers = await db
+        .select({
+          answer: mockTestAnswers,
+          question: {
+            id: questions.id,
+            content: questions.content,
+            correctAnswer: questions.correctAnswer,
+            explanation: questions.explanation,
+          },
+        })
+        .from(mockTestAnswers)
+        .innerJoin(questions, eq(questions.id, mockTestAnswers.questionId))
+        .where(eq(mockTestAnswers.sessionId, sessionId));
+
+      let totalScore = 0;
+      const processedAnswers = await Promise.all(
+        answers.map(async ({ answer, question }) => {
+          const isCorrect = answer.selectedOption === question.correctAnswer;
+          if (isCorrect) totalScore++;
+
+          // Generate feedback based on the answer
+          const feedback = isCorrect
+            ? "Correct! " + (question.explanation || "")
+            : `Incorrect. The correct answer was option ${question.correctAnswer}. ${
+                question.explanation || ""
+              }`;
+
+          // Update the answer with feedback
+          const [updatedAnswer] = await db
+            .update(mockTestAnswers)
+            .set({
+              isCorrect,
+              feedback,
+              confidenceLevel: calculateConfidenceLevel(answer.timeSpent),
+              mistakeCategory: !isCorrect
+                ? categorizeMistake(answer.selectedOption, question.correctAnswer)
+                : null,
+            })
+            .where(eq(mockTestAnswers.id, answer.id))
+            .returning();
+
+          return updatedAnswer;
+        })
+      );
+
+      // Update session score
+      const [updatedSession] = await db
+        .update(mockTestSessions)
+        .set({
+          score: totalScore,
+          status: "completed",
+          endTime: new Date(),
+        })
+        .where(eq(mockTestSessions.id, sessionId))
+        .returning();
+
+      // Send notification about completed test
+      await db.insert(notifications).values({
+        userId: session.userId,
+        title: "Mock Test Results Available",
+        content: `Your mock test results are ready. Score: ${totalScore}/${answers.length}`,
+        type: "result",
+      });
+
+      res.json({
+        session: updatedSession,
+        answers: processedAnswers,
+      });
+    } catch (error: any) {
+      console.error("Error processing results:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  // Notification Routes
+  app.get("/api/notifications", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+
+    try {
+      const userNotifications = await db
+        .select()
+        .from(notifications)
+        .where(eq(notifications.userId, req.user.id))
+        .orderBy(desc(notifications.createdAt));
+
+      res.json(userNotifications);
+    } catch (error: any) {
+      console.error("Error fetching notifications:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.post("/api/notifications/:id/mark-read", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+
+    try {
+      const [notification] = await db
+        .update(notifications)
+        .set({
+          status: "read",
+          readAt: new Date(),
+        })
+        .where(
+          and(
+            eq(notifications.id, parseInt(req.params.id)),
+            eq(notifications.userId, req.user.id)
+          )
+        )
+        .returning();
+
+      res.json(notification);
+    } catch (error: any) {
+      console.error("Error marking notification as read:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  // Helper functions for result processing
+  function calculateConfidenceLevel(timeSpent: number): number {
+    // Time spent is in seconds
+    // Quick answers might indicate high confidence
+    if (timeSpent < 30) return 5;
+    if (timeSpent < 60) return 4;
+    if (timeSpent < 120) return 3;
+    if (timeSpent < 180) return 2;
+    return 1;
+  }
+
+  function categorizeMistake(selected: number, correct: number): string {
+    // This is a simple implementation
+    // In a real application, this would be more sophisticated
+    // based on question type and common mistake patterns
+    if (Math.abs(selected - correct) === 1) {
+      return "near_miss";
+    }
+    return "conceptual_error";
+  }
 
   const httpServer = createServer(app);
   return httpServer;

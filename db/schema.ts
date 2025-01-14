@@ -207,7 +207,67 @@ export const mockTestAnswers = pgTable("mock_test_answers", {
   selectedOption: integer("selected_option"),
   isCorrect: boolean("is_correct"),
   timeSpent: integer("time_spent"), // in seconds
+  feedback: text("feedback"), // Automated feedback for the answer
+  confidenceLevel: integer("confidence_level"), // 1-5 scale
+  mistakeCategory: text("mistake_category"), // Categorize type of mistake for better feedback
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const events = pgTable("events", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description"),
+  type: text("type", {
+    enum: ["exam", "workshop", "deadline", "other"]
+  }).notNull(),
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time"),
+  location: text("location"), // Can be physical location or virtual meeting link
+  capacity: integer("capacity"),
+  enrolledCount: integer("enrolled_count").default(0),
+  status: text("status", {
+    enum: ["scheduled", "in_progress", "completed", "cancelled"]
+  }).notNull().default("scheduled"),
+  notifications: jsonb("notifications").default({
+    reminderSent: false,
+    startingSoon: false,
+    completed: false
+  }),
+  metadata: jsonb("metadata").default({}),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const eventParticipants = pgTable("event_participants", {
+  id: serial("id").primaryKey(),
+  eventId: integer("event_id").references(() => events.id).notNull(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  role: text("role", {
+    enum: ["attendee", "presenter", "organizer"]
+  }).notNull().default("attendee"),
+  status: text("status", {
+    enum: ["registered", "attended", "cancelled", "no_show"]
+  }).notNull().default("registered"),
+  registeredAt: timestamp("registered_at").defaultNow().notNull(),
+  checkedInAt: timestamp("checked_in_at"),
+  feedback: jsonb("feedback").default({}),
+});
+
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  type: text("type", {
+    enum: ["event", "result", "system", "message"]
+  }).notNull(),
+  status: text("status", {
+    enum: ["unread", "read", "archived"]
+  }).notNull().default("unread"),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  readAt: timestamp("read_at"),
 });
 
 export const insertUserSchema = createInsertSchema(users);
@@ -289,3 +349,18 @@ export const insertMockTestAnswerSchema = createInsertSchema(mockTestAnswers);
 export const selectMockTestAnswerSchema = createSelectSchema(mockTestAnswers);
 export type InsertMockTestAnswer = typeof mockTestAnswers.$inferInsert;
 export type SelectMockTestAnswer = typeof mockTestAnswers.$inferSelect;
+
+export const insertEventSchema = createInsertSchema(events);
+export const selectEventSchema = createSelectSchema(events);
+export type InsertEvent = typeof events.$inferInsert;
+export type SelectEvent = typeof events.$inferSelect;
+
+export const insertEventParticipantSchema = createInsertSchema(eventParticipants);
+export const selectEventParticipantSchema = createSelectSchema(eventParticipants);
+export type InsertEventParticipant = typeof eventParticipants.$inferInsert;
+export type SelectEventParticipant = typeof eventParticipants.$inferSelect;
+
+export const insertNotificationSchema = createInsertSchema(notifications);
+export const selectNotificationSchema = createSelectSchema(notifications);
+export type InsertNotification = typeof notifications.$inferInsert;
+export type SelectNotification = typeof notifications.$inferSelect;
