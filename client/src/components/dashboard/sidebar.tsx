@@ -8,7 +8,6 @@ import {
   LayoutDashboard,
   Users,
   BookOpen,
-  BarChart2,
   CreditCard,
   GraduationCap,
   Library,
@@ -22,6 +21,7 @@ import {
   Tags,
   FileText,
   ShoppingCart,
+  LineChart
 } from "lucide-react";
 
 interface NavigationItem {
@@ -39,7 +39,6 @@ const adminNavigation: NavigationItem[] = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Users", href: "/dashboard/users", icon: Users },
   { name: "Questions", href: "/dashboard/questions", icon: BookOpen },
-  { name: "Analytics", href: "/dashboard/analytics", icon: BarChart2 },
   {
     name: "E-Commerce",
     icon: ShoppingCart,
@@ -62,7 +61,6 @@ const tutorNavigation: NavigationItem[] = [
   { name: "Questions", href: "/dashboard/questions", icon: BookOpen },
   { name: "Mock Tests", href: "/dashboard/mock-tests", icon: Clock },
   { name: "Courses", href: "/dashboard/courses", icon: Library },
-  { name: "Analytics", href: "/dashboard/analytics", icon: BarChart2 },
   { name: "Profile", href: "/dashboard/profile", icon: UserCircle },
 ];
 
@@ -70,7 +68,7 @@ const studentNavigation: NavigationItem[] = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "My Courses", href: "/dashboard/my-courses", icon: BookMarked },
   { name: "Mock Tests", href: "/dashboard/mock-tests", icon: Clock },
-  { name: "Progress", href: "/dashboard/progress", icon: BarChart2 },
+  { name: "Progress", href: "/dashboard/progress", icon: LineChart },
   { name: "Achievements", href: "/dashboard/achievements", icon: Award },
   { name: "Profile", href: "/dashboard/profile", icon: UserCircle },
 ];
