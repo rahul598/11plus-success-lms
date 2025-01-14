@@ -3,6 +3,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
+import 'katex/dist/katex.min.css';
+import { InlineMath, BlockMath } from "@matejmazur/react-katex";
 import {
   Form,
   FormControl,
@@ -28,21 +30,28 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { X, Upload } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { X, Upload, Plus, FileImage } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 
 const questionSchema = z.object({
-  id: z.number().optional(),
-  category: z.string().min(1, "Category is required"),
-  quizName: z.string().min(1, "Quiz name is required"),
-  questionType: z.enum(["Text Only", "True/False", "Images"]),
-  questionTitle: z.string().min(1, "Question title is required"),
-  questionImage: z.string().optional(),
-  optionType: z.enum(["Text Only", "Images"]).optional(),
-  options: z.array(z.string()).min(2, "At least two options are required"),
-  optionImages: z.array(z.string()).optional(),
+  title: z.string().min(1, "Title is required"),
+  content: z.string().min(1, "Content is required"),
+  category: z.enum(["Mathematics", "Physics", "Chemistry", "Reasoning", "General"]),
+  subCategory: z.string().min(1, "Sub-category is required"),
+  difficulty: z.enum(["easy", "medium", "hard"]),
+  questionType: z.enum(["text", "math_formula", "image_based", "diagram", "mixed"]),
+  options: z.array(z.object({
+    text: z.string(),
+    formula: z.string().optional(),
+    image: z.string().optional(),
+  })).min(2, "At least two options are required"),
   correctAnswer: z.number().min(0, "Correct answer is required"),
   explanation: z.string().optional(),
-  createdAt: z.date().optional(),
+  hasFormula: z.boolean(),
+  formulaTeX: z.string().optional(),
+  images: z.array(z.string()).optional(),
+  diagrams: z.array(z.string()).optional(),
 });
 
 type QuestionFormValues = z.infer<typeof questionSchema>;
@@ -50,48 +59,54 @@ type QuestionFormValues = z.infer<typeof questionSchema>;
 interface QuestionEditorProps {
   open: boolean;
   onClose: () => void;
+  editingQuestion?: QuestionFormValues;
 }
 
 const categories = [
-  "Mathematics",
-  "Science",
-  "History",
-  "Literature",
-  "Computer Science",
-  "Languages",
+  { label: "Mathematics", subCategories: ["Algebra", "Geometry", "Calculus", "Statistics"] },
+  { label: "Physics", subCategories: ["Mechanics", "Thermodynamics", "Optics", "Electromagnetism"] },
+  { label: "Chemistry", subCategories: ["Organic", "Inorganic", "Physical", "Analytical"] },
+  { label: "Reasoning", subCategories: ["Verbal", "Non-verbal", "Logical", "Analytical"] },
+  { label: "General", subCategories: ["General Knowledge", "Current Affairs", "History", "Geography"] },
 ];
 
-const quizNames = ["Quiz 1", "Quiz 2", "Quiz 3", "New Quiz"]; // This should be fetched from API
-
-export function QuestionEditor({ open, onClose }: QuestionEditorProps) {
+export function QuestionEditor({ open, onClose, editingQuestion }: QuestionEditorProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [questionType, setQuestionType] = useState<"Text Only" | "True/False" | "Images">("Text Only");
-  const [optionType, setOptionType] = useState<"Text Only" | "Images">("Text Only");
+  const [previewFormula, setPreviewFormula] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [questionType, setQuestionType] = useState<"text" | "math_formula" | "image_based" | "diagram" | "mixed">("text");
 
   const form = useForm<QuestionFormValues>({
     resolver: zodResolver(questionSchema),
-    defaultValues: {
-      category: "",
-      quizName: "",
-      questionType: "Text Only",
-      questionTitle: "",
-      questionImage: "",
-      optionType: "Text Only",
-      options: ["", "", "", ""],
-      optionImages: ["", "", "", ""],
+    defaultValues: editingQuestion || {
+      title: "",
+      content: "",
+      category: "General",
+      subCategory: "",
+      difficulty: "medium",
+      questionType: "text",
+      options: [
+        { text: "", formula: "", image: "" },
+        { text: "", formula: "", image: "" },
+        { text: "", formula: "", image: "" },
+        { text: "", formula: "", image: "" },
+      ],
       correctAnswer: 0,
       explanation: "",
+      hasFormula: false,
+      formulaTeX: "",
+      images: [],
+      diagrams: [],
     },
   });
 
-  // Reset form when dialog opens/closes
   useEffect(() => {
     if (!open) {
       form.reset();
-      setQuestionType("Text Only");
-      setOptionType("Text Only");
+      setPreviewFormula("");
+      setSelectedCategory(null);
+      setQuestionType("text");
     }
   }, [open, form]);
 
@@ -115,9 +130,9 @@ export function QuestionEditor({ open, onClose }: QuestionEditorProps) {
   const mutation = useMutation({
     mutationFn: async (data: QuestionFormValues) => {
       const response = await fetch(
-        data.id ? `/api/questions/${data.id}` : "/api/questions",
+        editingQuestion ? `/api/questions/${editingQuestion.id}` : "/api/questions",
         {
-          method: data.id ? "PUT" : "POST",
+          method: editingQuestion ? "PUT" : "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data),
         }
@@ -132,7 +147,7 @@ export function QuestionEditor({ open, onClose }: QuestionEditorProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/questions"] });
       toast({
-        title: "Question created successfully",
+        title: `Question ${editingQuestion ? "updated" : "created"} successfully`,
       });
       onClose();
     },
@@ -145,28 +160,21 @@ export function QuestionEditor({ open, onClose }: QuestionEditorProps) {
     },
   });
 
-  const onSubmit = async (data: QuestionFormValues) => {
-    setIsSubmitting(true);
-    try {
-      await mutation.mutateAsync(data);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
-            <span>Add Question</span>
+            <span>{editingQuestion ? "Edit Question" : "Add Question"}</span>
             <Button variant="ghost" size="icon" onClick={onClose}>
               <X className="h-4 w-4" />
             </Button>
           </DialogTitle>
         </DialogHeader>
+
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit((data) => mutation.mutateAsync(data))} className="space-y-6">
+            {/* Basic Question Info */}
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -175,8 +183,11 @@ export function QuestionEditor({ open, onClose }: QuestionEditorProps) {
                   <FormItem>
                     <FormLabel>Category</FormLabel>
                     <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        setSelectedCategory(value);
+                      }}
+                      value={field.value}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -184,9 +195,9 @@ export function QuestionEditor({ open, onClose }: QuestionEditorProps) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {categories.map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
+                        {categories.map((cat) => (
+                          <SelectItem key={cat.label} value={cat.label}>
+                            {cat.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -198,25 +209,29 @@ export function QuestionEditor({ open, onClose }: QuestionEditorProps) {
 
               <FormField
                 control={form.control}
-                name="quizName"
+                name="subCategory"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Quiz Name</FormLabel>
+                    <FormLabel>Sub-Category</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={field.value}
+                      disabled={!selectedCategory}
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select Quiz Name" />
+                          <SelectValue placeholder="Select Sub-Category" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {quizNames.map((quiz) => (
-                          <SelectItem key={quiz} value={quiz}>
-                            {quiz}
-                          </SelectItem>
-                        ))}
+                        {selectedCategory &&
+                          categories
+                            .find((cat) => cat.label === selectedCategory)
+                            ?.subCategories.map((sub) => (
+                              <SelectItem key={sub} value={sub}>
+                                {sub}
+                              </SelectItem>
+                            ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -225,179 +240,143 @@ export function QuestionEditor({ open, onClose }: QuestionEditorProps) {
               />
             </div>
 
-            <FormField
-              control={form.control}
-              name="questionType"
-              render={({ field }) => (
-                <FormItem className="space-y-1">
-                  <FormLabel>Question Type</FormLabel>
-                  <FormControl>
-                    <RadioGroup
-                      onValueChange={(value: "Text Only" | "True/False" | "Images") => {
+            {/* Question Type and Formula Support */}
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="questionType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Question Type</FormLabel>
+                    <Select
+                      onValueChange={(value: typeof field.value) => {
                         field.onChange(value);
                         setQuestionType(value);
-                        if (value === "Images") {
-                          setOptionType("Images");
-                        }
                       }}
-                      defaultValue={field.value}
-                      className="flex space-x-4"
+                      value={field.value}
                     >
-                      <FormItem className="flex items-center space-x-2">
-                        <FormControl>
-                          <RadioGroupItem value="Text Only" />
-                        </FormControl>
-                        <FormLabel className="font-normal">
-                          Text Only
-                        </FormLabel>
-                      </FormItem>
-                      <FormItem className="flex items-center space-x-2">
-                        <FormControl>
-                          <RadioGroupItem value="True/False" />
-                        </FormControl>
-                        <FormLabel className="font-normal">
-                          True/False
-                        </FormLabel>
-                      </FormItem>
-                      <FormItem className="flex items-center space-x-2">
-                        <FormControl>
-                          <RadioGroupItem value="Images" />
-                        </FormControl>
-                        <FormLabel className="font-normal">
-                          Images
-                        </FormLabel>
-                      </FormItem>
-                    </RadioGroup>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Question Type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="text">Text Only</SelectItem>
+                        <SelectItem value="math_formula">Mathematical Formula</SelectItem>
+                        <SelectItem value="image_based">Image Based</SelectItem>
+                        <SelectItem value="diagram">Scientific Diagram</SelectItem>
+                        <SelectItem value="mixed">Mixed Content</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
+              <FormField
+                control={form.control}
+                name="difficulty"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Difficulty Level</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Difficulty" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="easy">Easy</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="hard">Hard</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Question Title and Content */}
             <FormField
               control={form.control}
-              name="questionTitle"
+              name="title"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Question Title</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="Enter Question" />
+                    <Input {...field} placeholder="Enter a clear, concise title" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            {questionType === "Images" && (
-              <FormField
-                control={form.control}
-                name="questionImage"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Question Image</FormLabel>
-                    <FormControl>
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="file"
-                          accept="image/*"
-                          onChange={async (e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              try {
-                                const url = await handleImageUpload(file);
-                                field.onChange(url);
-                              } catch (error) {
-                                toast({
-                                  variant: "destructive",
-                                  title: "Error uploading image",
-                                  description: "Please try again",
-                                });
-                              }
-                            }
-                          }}
-                        />
-                        {field.value && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => field.onChange("")}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
+            <FormField
+              control={form.control}
+              name="content"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Question Content</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      {...field}
+                      placeholder="Enter the question content"
+                      className="min-h-[100px]"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-            {questionType !== "True/False" && (
-              <FormField
-                control={form.control}
-                name="optionType"
-                render={({ field }) => (
-                  <FormItem className="space-y-1">
-                    <FormLabel>Option Type</FormLabel>
-                    <FormControl>
-                      <RadioGroup
-                        onValueChange={(value: "Text Only" | "Images") => {
-                          field.onChange(value);
-                          setOptionType(value);
-                        }}
-                        value={optionType}
-                        className="flex space-x-4"
-                        disabled={questionType === "Images"}
-                      >
-                        <FormItem className="flex items-center space-x-2">
-                          <FormControl>
-                            <RadioGroupItem value="Text Only" />
-                          </FormControl>
-                          <FormLabel className="font-normal">
-                            Text Only
-                          </FormLabel>
-                        </FormItem>
-                        <FormItem className="flex items-center space-x-2">
-                          <FormControl>
-                            <RadioGroupItem value="Images" />
-                          </FormControl>
-                          <FormLabel className="font-normal">
-                            Images
-                          </FormLabel>
-                        </FormItem>
-                      </RadioGroup>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-
-            {["A", "B", "C", "D"].map((option, index) => (
-              <div key={option} className="space-y-4">
+            {/* Formula Input for Math/Science Questions */}
+            {(questionType === "math_formula" || questionType === "mixed") && (
+              <div className="space-y-4">
                 <FormField
                   control={form.control}
-                  name={`options.${index}`}
+                  name="formulaTeX"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Option {option}</FormLabel>
+                      <FormLabel>Mathematical Formula (LaTeX)</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder={`Enter Option ${option}`} />
+                        <div className="space-y-2">
+                          <Textarea
+                            {...field}
+                            placeholder="Enter LaTeX formula (e.g., \frac{d}{dx}x^2 = 2x)"
+                            onChange={(e) => {
+                              field.onChange(e.target.value);
+                              setPreviewFormula(e.target.value);
+                            }}
+                          />
+                          {previewFormula && (
+                            <Card className="p-4">
+                              <CardContent>
+                                <p className="text-sm text-muted-foreground mb-2">Preview:</p>
+                                <BlockMath math={previewFormula} />
+                              </CardContent>
+                            </Card>
+                          )}
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                {optionType === "Images" && (
-                  <FormField
-                    control={form.control}
-                    name={`optionImages.${index}`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Option {option} Image</FormLabel>
-                        <FormControl>
+              </div>
+            )}
+
+            {/* Image Upload for Image-Based Questions */}
+            {(questionType === "image_based" || questionType === "diagram" || questionType === "mixed") && (
+              <div className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="images"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Question Images</FormLabel>
+                      <FormControl>
+                        <div className="space-y-2">
                           <div className="flex items-center gap-2">
                             <Input
                               type="file"
@@ -407,9 +386,8 @@ export function QuestionEditor({ open, onClose }: QuestionEditorProps) {
                                 if (file) {
                                   try {
                                     const url = await handleImageUpload(file);
-                                    const images = form.getValues("optionImages") || [];
-                                    images[index] = url;
-                                    form.setValue("optionImages", images);
+                                    const currentImages = field.value || [];
+                                    field.onChange([...currentImages, url]);
                                   } catch (error) {
                                     toast({
                                       variant: "destructive",
@@ -420,40 +398,165 @@ export function QuestionEditor({ open, onClose }: QuestionEditorProps) {
                                 }
                               }}
                             />
-                            {field.value && (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => {
-                                  const images = form.getValues("optionImages") || [];
-                                  images[index] = "";
-                                  form.setValue("optionImages", images);
-                                }}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            )}
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => {
+                                const input = document.createElement("input");
+                                input.type = "file";
+                                input.accept = "image/*";
+                                input.click();
+                              }}
+                            >
+                              <FileImage className="h-4 w-4 mr-2" />
+                              Add Image
+                            </Button>
                           </div>
+                          {field.value && field.value.length > 0 && (
+                            <div className="grid grid-cols-2 gap-4 mt-4">
+                              {field.value.map((url, index) => (
+                                <div key={index} className="relative">
+                                  <img
+                                    src={url}
+                                    alt={`Question image ${index + 1}`}
+                                    className="w-full h-40 object-cover rounded-md"
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="icon"
+                                    className="absolute top-2 right-2"
+                                    onClick={() => {
+                                      const newImages = field.value?.filter((_, i) => i !== index);
+                                      field.onChange(newImages);
+                                    }}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
+
+            {/* Answer Options */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Answer Options</h3>
+              {["A", "B", "C", "D"].map((option, index) => (
+                <div key={option} className="space-y-4 p-4 border rounded-lg">
+                  <h4 className="font-medium">Option {option}</h4>
+
+                  <FormField
+                    control={form.control}
+                    name={`options.${index}.text`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Option Text</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder={`Enter Option ${option}`} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                )}
-              </div>
-            ))}
 
+                  {(questionType === "math_formula" || questionType === "mixed") && (
+                    <FormField
+                      control={form.control}
+                      name={`options.${index}.formula`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Option Formula (LaTeX)</FormLabel>
+                          <FormControl>
+                            <div className="space-y-2">
+                              <Input
+                                {...field}
+                                placeholder="Enter LaTeX formula"
+                              />
+                              {field.value && (
+                                <div className="p-2 bg-muted rounded-md">
+                                  <InlineMath math={field.value} />
+                                </div>
+                              )}
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
+                  {(questionType === "image_based" || questionType === "mixed") && (
+                    <FormField
+                      control={form.control}
+                      name={`options.${index}.image`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Option Image</FormLabel>
+                          <FormControl>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="file"
+                                accept="image/*"
+                                onChange={async (e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    try {
+                                      const url = await handleImageUpload(file);
+                                      field.onChange(url);
+                                    } catch (error) {
+                                      toast({
+                                        variant: "destructive",
+                                        title: "Error uploading image",
+                                        description: "Please try again",
+                                      });
+                                    }
+                                  }
+                                }}
+                              />
+                              {field.value && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => field.onChange("")}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                            {field.value && (
+                              <img
+                                src={field.value}
+                                alt={`Option ${option}`}
+                                className="mt-2 max-h-32 object-contain rounded-md"
+                              />
+                            )}
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Correct Answer */}
             <FormField
               control={form.control}
               name="correctAnswer"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Correct Answer</FormLabel>
-                  <Select
-                    onValueChange={(value) => field.onChange(parseInt(value))}
-                    defaultValue={field.value.toString()}
-                  >
+                  <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value.toString()}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select Correct Answer" />
@@ -472,6 +575,7 @@ export function QuestionEditor({ open, onClose }: QuestionEditorProps) {
               )}
             />
 
+            {/* Explanation */}
             <FormField
               control={form.control}
               name="explanation"
@@ -479,22 +583,23 @@ export function QuestionEditor({ open, onClose }: QuestionEditorProps) {
                 <FormItem>
                   <FormLabel>Explanation (Optional)</FormLabel>
                   <FormControl>
-                    <div className="border rounded-md p-4">
-                      <Input
-                        {...field}
-                        placeholder="Your text here..."
-                        className="min-h-[100px]"
-                      />
-                    </div>
+                    <Textarea
+                      {...field}
+                      placeholder="Explain the correct answer"
+                      className="min-h-[100px]"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <div className="flex justify-center">
-              <Button type="submit" disabled={isSubmitting} className="w-full max-w-md">
-                {isSubmitting ? "Uploading..." : "Upload Question"}
+            <div className="flex justify-end gap-4">
+              <Button type="button" variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending ? "Saving..." : "Save Question"}
               </Button>
             </div>
           </form>
