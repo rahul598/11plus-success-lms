@@ -1,0 +1,35 @@
+New client connected: wAWPRqImDkI0xQGMAAAS
+8:10:55 PM [express] POST /api/login 200 in 1995ms :: {"message":"Login successful","user":{"id":3,"username":"admin","password":"587ecd3d5b9281cbc950126b3d1e217670c5fd6215234ab49232ca1f6f27138e400616e5fabd9afb4ee98bd02c68e31c6904f71a539fec9502ffb87366582c65.5f66370d60abfa966a86c9d0e3136de9","email":"admin@example.com","role":"admin","createdAt":"2025-01-14T16:47:29.768Z","lastLogin":"2025-01-14T19:49:46.448Z"}}
+8:10:56 PM [express] GET /api/user 200 in 234ms :: {"id":3,"username":"admin","password":"587ecd3d5b9281cbc950126b3d1e217670c5fd6215234ab49232ca1f6f27138e400616e5fabd9afb4ee98bd02c68e31c6904f71a539fec9502ffb87366582c65.5f66370d60abfa966a86c9d0e3136de9","email":"admin@example.com","role":"admin","createdAt":"2025-01-14T16:47:29.768Z","lastLogin":"2025-01-14T20:10:55.736Z"}
+New client connected: EMvd-GePti9_Ibj5AAAW
+New client connected: JeojLq50jNqdZ4nhAAAX
+8:10:56 PM [express] GET /api/questions 304 in 472ms :: [{"id":1,"title":"Basic Addition","content":"What is 2 + 2?","category":"Mathematics","subCategory":"Arithmetic","difficulty":"easy","questionType":"text","contentType":{"hasImage":false,"hasDiagram":false,"hasFormula":false,"hasPattern":false},"options":[{"id":1,"text":"3"},{"id":2,"text":"4"},{"id":3,"text":"5"},{"id":4,"text":"6"}],"correctAnswer":2,"explanation":null,"hints":[],"metadata":{},"createdBy":null,"createdAt":"2025-01-14T19:41:30.623Z","updatedAt":"2025-01-14T19:41:30.623Z"},{"id":2,"title":"Pattern Recognition","content":"Complete the sequence: 2, 4, 6, __","category":"Mathematics","subCategory":"Pattern Series","difficulty":"easy","questionType":"text","contentType":{"hasImage":false,"hasDiagram":false,"hasFormula":false,"hasPattern":false},"options":[{"id":1,"text":"7"},{"id":2,"text":"8"},{"id":3,"text":"9"},{"id":4,"text":"10"}],"correctAnswer":2,"explanation":null,"hints":[],"metadata":{},"createdBy":null,"createdAt":"2025-01-14T19:41:30.623Z","updatedAt":"2025-01-14T19:41:30.623Z"},{"id":3,"title":"English Grammar","content":"Choose the correct form: I ___ to school yesterday.","category":"English","subCategory":"Grammar","difficulty":"easy","questionType":"text","contentType":{"hasImage":false,"hasDiagram":false,"hasFormula":false,"hasPattern":false},"options":[{"id":1,"text":"go"},{"id":2,"text":"went"},{"id":3,"text":"gone"},{"id":4,"text":"going"}],"correctAnswer":2,"explanation":null,"hints":[],"metadata":{},"createdBy":null,"createdAt":"2025-01-14T19:41:30.623Z","updatedAt":"2025-01-14T19:41:30.623Z"}]
+New client connected: FoS1dLScAPhp6qITAAAa
+8:11:11 PM [express] GET /api/payments 304 in 1227ms :: []
+New client connected: fjEJTz2FktkekiiVAAAd
+file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345
+o?t(o):n(u)},"cb"),s=new r(function(o,u){n=o,t=u}).catch(o=>{throw Error.captureStackTrace(
+                                                                         ^
+
+error: column sp.question_id does not exist
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:465:31) {
+  length: 113,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '340',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '3716',
+  routine: 'errorMissingColumn'
+}

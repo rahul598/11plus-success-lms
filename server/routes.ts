@@ -472,11 +472,11 @@ export function registerRoutes(app: Express): Server {
         SELECT 
           q.difficulty,
           COUNT(*) as count,
-          AVG(sp.attempts) as "averageAttempts",
+          AVG(COALESCE(sp.attempts, 0)) as "averageAttempts",
           COUNT(CASE WHEN sp.completed THEN 1 END)::float / 
             NULLIF(COUNT(*), 0) * 100 as "successRate"
         FROM questions q
-        LEFT JOIN student_progress sp ON q.id = sp.question_id
+        LEFT JOIN student_progress sp ON q.id = sp.id
         GROUP BY q.difficulty
       )
       SELECT *
@@ -724,11 +724,11 @@ export function registerRoutes(app: Express): Server {
             SELECT 
               q.difficulty,
               COUNT(*) as count,
-              AVG(sp.attempts) as "averageAttempts",
+              AVG(COALESCE(sp.attempts, 0)) as "averageAttempts",
               COUNT(CASE WHEN sp.completed THEN 1 END)::float / 
                 NULLIF(COUNT(*), 0) * 100 as "successRate"
             FROM questions q
-            LEFT JOIN student_progress sp ON q.id = sp.question_id
+            LEFT JOIN student_progress sp ON q.id = sp.id
             GROUP BY q.difficulty
           )
           SELECT * FROM question_stats

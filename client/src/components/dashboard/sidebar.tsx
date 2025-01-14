@@ -18,6 +18,7 @@ import {
   Clock,
   BookMarked,
   UserCircle,
+  Package,
 } from "lucide-react";
 
 const adminNavigation = [
@@ -25,6 +26,7 @@ const adminNavigation = [
   { name: "Users", href: "/dashboard/users", icon: Users },
   { name: "Questions", href: "/dashboard/questions", icon: BookOpen },
   { name: "Analytics", href: "/dashboard/analytics", icon: BarChart2 },
+  { name: "Products", href: "/dashboard/products", icon: Package },
   { name: "Payments", href: "/dashboard/payments", icon: CreditCard },
   { name: "Tutors", href: "/dashboard/tutors", icon: GraduationCap },
   { name: "Courses", href: "/dashboard/courses", icon: Library },
@@ -56,10 +58,10 @@ export function Sidebar() {
   const { isOpen, toggle } = useSidebar();
   const { user } = useUser();
 
-  const navigation = user?.role === "admin" 
-    ? adminNavigation 
-    : user?.role === "tutor" 
-      ? tutorNavigation 
+  const navigation = user?.role === "admin"
+    ? adminNavigation
+    : user?.role === "tutor"
+      ? tutorNavigation
       : studentNavigation;
 
   return (
