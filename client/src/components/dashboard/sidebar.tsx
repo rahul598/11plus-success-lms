@@ -4,6 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { useUser } from "@/hooks/use-user";
+import { useSubscription } from "@/hooks/use-subscription";
 import {
   LayoutDashboard,
   Users,
@@ -24,14 +25,23 @@ import {
   LineChart
 } from "lucide-react";
 
+interface SubscriptionFeatures {
+  mockTests?: boolean;
+  studyMaterials?: boolean;
+  analysisReports?: boolean;
+  // Add other features as needed
+}
+
 interface NavigationItem {
   name: string;
   href?: string;
   icon: React.ComponentType<{ className?: string }>;
+  requiredFeature?: keyof SubscriptionFeatures;
   children?: Array<{
     name: string;
     href: string;
     icon: React.ComponentType<{ className?: string }>;
+    requiredFeature?: keyof SubscriptionFeatures;
   }>;
 }
 
@@ -59,17 +69,41 @@ const tutorNavigation: NavigationItem[] = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "My Students", href: "/dashboard/students", icon: Users },
   { name: "Questions", href: "/dashboard/questions", icon: BookOpen },
-  { name: "Mock Tests", href: "/dashboard/mock-tests", icon: Clock },
+  { 
+    name: "Mock Tests", 
+    href: "/dashboard/mock-tests", 
+    icon: Clock,
+    requiredFeature: "mockTests"
+  },
   { name: "Courses", href: "/dashboard/courses", icon: Library },
   { name: "Profile", href: "/dashboard/profile", icon: UserCircle },
 ];
 
 const studentNavigation: NavigationItem[] = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "My Courses", href: "/dashboard/my-courses", icon: BookMarked },
-  { name: "Mock Tests", href: "/dashboard/mock-tests", icon: Clock },
-  { name: "Progress", href: "/dashboard/progress", icon: LineChart },
-  { name: "Achievements", href: "/dashboard/achievements", icon: Award },
+  { 
+    name: "My Courses", 
+    href: "/dashboard/my-courses", 
+    icon: BookMarked,
+    requiredFeature: "studyMaterials"
+  },
+  { 
+    name: "Mock Tests", 
+    href: "/dashboard/mock-tests", 
+    icon: Clock,
+    requiredFeature: "mockTests"
+  },
+  { 
+    name: "Progress", 
+    href: "/dashboard/progress", 
+    icon: LineChart,
+    requiredFeature: "analysisReports"
+  },
+  { 
+    name: "Achievements", 
+    href: "/dashboard/achievements", 
+    icon: Award 
+  },
   { name: "Profile", href: "/dashboard/profile", icon: UserCircle },
 ];
 
@@ -77,12 +111,78 @@ export function Sidebar() {
   const [location] = useLocation();
   const { isOpen, toggle } = useSidebar();
   const { user } = useUser();
+  const { hasFeature } = useSubscription();
 
   const navigation = user?.role === "admin"
     ? adminNavigation
     : user?.role === "tutor"
       ? tutorNavigation
       : studentNavigation;
+
+  const renderNavItem = (item: NavigationItem) => {
+    // If item requires a feature and user doesn't have access, don't show it
+    if (item.requiredFeature && !hasFeature(item.requiredFeature)) {
+      return null;
+    }
+
+    if (item.children) {
+      return (
+        <div key={item.name} className="space-y-1">
+          <div className={cn(
+            "flex items-center px-3 py-2 text-sm font-medium",
+            isOpen ? "justify-start" : "justify-center",
+            "text-sidebar-foreground"
+          )}>
+            <item.icon className="h-4 w-4" />
+            {isOpen && <span className="ml-3">{item.name}</span>}
+          </div>
+          <div className={cn("pl-3 space-y-1", !isOpen && "pl-0")}>
+            {item.children.map((child) => {
+              if (child.requiredFeature && !hasFeature(child.requiredFeature)) {
+                return null;
+              }
+
+              const Icon = child.icon;
+              return (
+                <Link key={child.name} href={child.href}>
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      "w-full justify-start",
+                      location === child.href
+                        ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                        : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {isOpen && <span className="ml-3">{child.name}</span>}
+                  </Button>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    const Icon = item.icon;
+    return (
+      <Link key={item.name} href={item.href!}>
+        <Button
+          variant="ghost"
+          className={cn(
+            "w-full justify-start",
+            location === item.href
+              ? "bg-sidebar-accent text-sidebar-accent-foreground"
+              : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+          )}
+        >
+          <Icon className="h-4 w-4" />
+          {isOpen && <span className="ml-3">{item.name}</span>}
+        </Button>
+      </Link>
+    );
+  };
 
   return (
     <div
@@ -117,61 +217,7 @@ export function Sidebar() {
 
       <ScrollArea className="flex-1 px-3 py-2">
         <nav className="flex flex-col gap-1">
-          {navigation.map((item) => {
-            if (item.children) {
-              return (
-                <div key={item.name} className="space-y-1">
-                  <div className={cn(
-                    "flex items-center px-3 py-2 text-sm font-medium",
-                    isOpen ? "justify-start" : "justify-center",
-                    "text-sidebar-foreground"
-                  )}>
-                    <item.icon className="h-4 w-4" />
-                    {isOpen && <span className="ml-3">{item.name}</span>}
-                  </div>
-                  <div className={cn("pl-3 space-y-1", !isOpen && "pl-0")}>
-                    {item.children.map((child) => {
-                      const Icon = child.icon;
-                      return (
-                        <Link key={child.name} href={child.href}>
-                          <Button
-                            variant="ghost"
-                            className={cn(
-                              "w-full justify-start",
-                              location === child.href
-                                ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                                : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
-                            )}
-                          >
-                            <Icon className="h-4 w-4" />
-                            {isOpen && <span className="ml-3">{child.name}</span>}
-                          </Button>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            }
-
-            const Icon = item.icon;
-            return (
-              <Link key={item.name} href={item.href!}>
-                <Button
-                  variant="ghost"
-                  className={cn(
-                    "w-full justify-start",
-                    location === item.href
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                      : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {isOpen && <span className="ml-3">{item.name}</span>}
-                </Button>
-              </Link>
-            );
-          })}
+          {navigation.map(renderNavItem)}
         </nav>
       </ScrollArea>
     </div>

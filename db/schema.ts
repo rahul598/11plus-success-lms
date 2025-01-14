@@ -322,14 +322,40 @@ export const subscriptionPlans = pgTable("subscription_plans", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description").notNull(),
+  tier: text("tier", {
+    enum: ["basic", "standard", "premium", "enterprise"]
+  }).notNull().default("basic"),
   duration: integer("duration").notNull(), // in days
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   features: jsonb("features").notNull().default({
-    mockTests: false,
-    liveClasses: false,
-    studyMaterials: false,
-    tutorSupport: false,
-    analysisReports: false
+    mockTests: {
+      enabled: false,
+      limit: 0 // 0 means disabled, -1 means unlimited
+    },
+    liveClasses: {
+      enabled: false,
+      limit: 0
+    },
+    studyMaterials: {
+      enabled: false,
+      categories: [] // empty means no access
+    },
+    tutorSupport: {
+      enabled: false,
+      hoursPerMonth: 0
+    },
+    analysisReports: {
+      enabled: false,
+      detailed: false
+    },
+    downloadAccess: {
+      enabled: false,
+      formats: [] // supported formats for downloads
+    },
+    customization: {
+      enabled: false,
+      features: [] // customizable features
+    }
   }),
   maxMockTests: integer("max_mock_tests"), // null means unlimited
   isActive: boolean("is_active").default(true).notNull(),
