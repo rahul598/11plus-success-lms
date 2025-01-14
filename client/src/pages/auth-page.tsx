@@ -54,7 +54,14 @@ export default function AuthPage() {
     <div className="flex min-h-screen items-center justify-center bg-gray-50">
       <Card className="w-full max-w-md mx-4">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl">Sign in</CardTitle>
+          <div className="flex justify-center mb-6">
+            <img 
+              src="https://vinsonedge.com/wp-content/uploads/2025/01/Logo-3.png" 
+              alt="Vinsonedge Logo"
+              className="h-12"
+            />
+          </div>
+          <CardTitle className="text-2xl text-center">Sign in</CardTitle>
         </CardHeader>
         <CardContent>
           <Form {...form}>

@@ -199,7 +199,7 @@ export function Sidebar() {
           <img 
             src="https://vinsonedge.com/wp-content/uploads/2025/01/Logo-3.png" 
             alt="Vinsonedge Logo"
-            className="h-8"
+            className="h-8 filter brightness-0 invert"
           />
         </div>
         <Button
