@@ -1642,6 +1642,43 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Get question statistics
+  app.get("/api/questions/stats", requireAuth, async (_req, res) => {
+    try {
+      // Get total question count
+      const [{ total }] = await db
+        .select({
+          total: sql<number>`count(*)`
+        })
+        .from(questions);
+
+      // Get counts by category
+      const categoryCounts = await db
+        .select({
+          category: questions.category,
+          total: sql<number>`count(*)`
+        })
+        .from(questions)
+        .groupBy(questions.category);
+
+      // Transform into a more convenient format
+      const byCategory = Object.fromEntries(
+        categoryCounts.map(({ category, total }) => [
+          category,
+          { total }
+        ])
+      );
+
+      res.json({
+        total,
+        byCategory
+      });
+    } catch (error: any) {
+      console.error("Error fetching question statistics:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

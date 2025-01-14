@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import {
   Form,
@@ -28,8 +28,8 @@ const mockTestSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string(),
   type: z.enum(["subject_specific", "mixed"]),
-  duration: z.number().int().positive("Duration must be positive"),
-  totalQuestions: z.number().int().positive("Total questions must be positive"),
+  duration: z.number().int().min(1, "Duration must be at least 1 minute"),
+  totalQuestions: z.number().int().min(1, "Must have at least 1 question"),
   rules: z.object({
     category: z.string().optional(),
     categoryDistribution: z.record(z.number()).optional(),
@@ -47,6 +47,18 @@ export function CreateMockTestForm({ onSuccess }: CreateMockTestFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Query to check available questions count
+  const { data: questionStats, isLoading: isLoadingStats } = useQuery({
+    queryKey: ["/api/questions/stats"],
+    queryFn: async () => {
+      const response = await fetch("/api/questions/stats");
+      if (!response.ok) {
+        throw new Error("Failed to fetch question statistics");
+      }
+      return response.json();
+    },
+  });
 
   const form = useForm<z.infer<typeof mockTestSchema>>({
     resolver: zodResolver(mockTestSchema),
@@ -69,6 +81,33 @@ export function CreateMockTestForm({ onSuccess }: CreateMockTestFormProps) {
     },
   });
 
+  // Watch form values for validation
+  const selectedCategory = form.watch("rules.category");
+  const totalQuestions = form.watch("totalQuestions");
+  const testType = form.watch("type");
+
+  // Validate question availability
+  const validateQuestionAvailability = () => {
+    if (!questionStats) return false;
+
+    if (testType === "subject_specific") {
+      const categoryStats = questionStats.byCategory[selectedCategory];
+      return categoryStats && categoryStats.total >= totalQuestions;
+    }
+
+    return questionStats.total >= totalQuestions;
+  };
+
+  const getAvailableQuestionCount = () => {
+    if (!questionStats) return 0;
+
+    if (testType === "subject_specific") {
+      return questionStats.byCategory[selectedCategory]?.total || 0;
+    }
+
+    return questionStats.total;
+  };
+
   const createMockTest = useMutation({
     mutationFn: async (data: z.infer<typeof mockTestSchema>) => {
       const response = await fetch("/api/mock-tests/generate", {
@@ -78,7 +117,8 @@ export function CreateMockTestForm({ onSuccess }: CreateMockTestFormProps) {
       });
 
       if (!response.ok) {
-        throw new Error(await response.text());
+        const errorText = await response.text();
+        throw new Error(errorText);
       }
 
       return response.json();
@@ -101,6 +141,16 @@ export function CreateMockTestForm({ onSuccess }: CreateMockTestFormProps) {
   });
 
   const onSubmit = async (data: z.infer<typeof mockTestSchema>) => {
+    if (!validateQuestionAvailability()) {
+      const available = getAvailableQuestionCount();
+      toast({
+        title: "Not Enough Questions",
+        description: `Only ${available} questions available for the selected criteria. Please reduce the number of questions or add more questions to the question bank.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       await createMockTest.mutateAsync(data);
@@ -108,6 +158,14 @@ export function CreateMockTestForm({ onSuccess }: CreateMockTestFormProps) {
       setIsSubmitting(false);
     }
   };
+
+  if (isLoadingStats) {
+    return (
+      <div className="flex items-center justify-center p-6">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <Form {...form}>
@@ -201,6 +259,14 @@ export function CreateMockTestForm({ onSuccess }: CreateMockTestFormProps) {
                     onChange={(e) => field.onChange(parseInt(e.target.value))}
                   />
                 </FormControl>
+                <FormDescription>
+                  Available questions: {getAvailableQuestionCount()}
+                  {!validateQuestionAvailability() && (
+                    <p className="text-destructive text-sm mt-1">
+                      Not enough questions available
+                    </p>
+                  )}
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -236,7 +302,10 @@ export function CreateMockTestForm({ onSuccess }: CreateMockTestFormProps) {
           />
         )}
 
-        <Button type="submit" disabled={isSubmitting}>
+        <Button 
+          type="submit" 
+          disabled={isSubmitting || !validateQuestionAvailability()}
+        >
           {isSubmitting ? "Creating..." : "Create Mock Test"}
         </Button>
       </form>
