@@ -2,7 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { db } from "@db";
-import { users, questions, courses, tutors, payments, studentProgress, media, achievements, rewards, studentAchievements, studentRewards, studentEngagement, mockTests, mockTestQuestions } from "@db/schema";
+import { users, questions, courses, tutors, payments, studentProgress, media, achievements, rewards, studentAchievements, studentRewards, studentEngagement, mockTests, mockTestQuestions, mockTestSessions } from "@db/schema";
 import { eq, desc, and, sql, not, exists } from "drizzle-orm";
 import multer from "multer";
 
@@ -63,6 +63,99 @@ export function registerRoutes(app: Express): Server {
       tutors: tutorCount.count,
       revenue: revenue || 0,
     });
+  });
+
+  // Stats endpoints for role-specific dashboards
+  app.get("/api/tutor/stats", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user || req.user.role !== "tutor") {
+      return res.status(403).send("Forbidden");
+    }
+
+    try {
+      const [totalStudents] = await db
+        .select({ count: sql<number>`count(distinct sp.user_id)` })
+        .from(studentProgress)
+        .where(eq(studentProgress.tutorId, req.user.id));
+
+      const [activeCourses] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(courses)
+        .where(and(
+          eq(courses.createdBy, req.user.id),
+          eq(courses.published, true)
+        ));
+
+      const [mockTests] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(mockTests)
+        .where(eq(mockTests.createdBy, req.user.id));
+
+      const [{ averageRating }] = await db
+        .select({
+          averageRating: sql<number>`avg(rating)::numeric(10,2)`
+        })
+        .from(tutors)
+        .where(eq(tutors.userId, req.user.id));
+
+      res.json({
+        totalStudents: totalStudents.count || 0,
+        activeCourses: activeCourses.count || 0,
+        mockTests: mockTests.count || 0,
+        averageRating: averageRating || 0,
+      });
+    } catch (error: any) {
+      console.error("Error fetching tutor stats:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.get("/api/student/stats", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user || req.user.role !== "student") {
+      return res.status(403).send("Forbidden");
+    }
+
+    try {
+      const [completedCourses] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(studentProgress)
+        .where(and(
+          eq(studentProgress.userId, req.user.id),
+          eq(studentProgress.progress, 100)
+        ));
+
+      const [activeTests] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(mockTestSessions)
+        .where(and(
+          eq(mockTestSessions.userId, req.user.id),
+          eq(mockTestSessions.status, "in_progress")
+        ));
+
+      const [achievements] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(studentAchievements)
+        .where(eq(studentAchievements.userId, req.user.id));
+
+      const [{ averageScore }] = await db
+        .select({
+          averageScore: sql<number>`avg(score)::numeric(10,2)`
+        })
+        .from(mockTestSessions)
+        .where(and(
+          eq(mockTestSessions.userId, req.user.id),
+          eq(mockTestSessions.status, "completed")
+        ));
+
+      res.json({
+        completedCourses: completedCourses.count || 0,
+        activeTests: activeTests.count || 0,
+        achievements: achievements.count || 0,
+        averageScore: averageScore || 0,
+      });
+    } catch (error: any) {
+      console.error("Error fetching student stats:", error);
+      res.status(500).send(error.message);
+    }
   });
 
   // Users
@@ -999,11 +1092,11 @@ export function registerRoutes(app: Express): Server {
         .orderBy(mockTestQuestions.orderNumber);
 
       res.json({ ...mockTest, questions });
-  } catch (error: any) {
-    console.error("Error fetching mock test:", error);
-    res.status(500).send(error.message);
-  }
-});
+    } catch (error: any) {
+      console.error("Error fetching mock test:", error);
+      res.status(500).send(error.message);
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

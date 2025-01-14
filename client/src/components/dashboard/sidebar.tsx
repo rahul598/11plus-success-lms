@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/hooks/use-sidebar";
+import { useUser } from "@/hooks/use-user";
 import {
   LayoutDashboard,
   Users,
@@ -13,9 +14,13 @@ import {
   Library,
   Settings,
   ChevronLeft,
+  Award,
+  Clock,
+  BookMarked,
+  UserCircle,
 } from "lucide-react";
 
-const navigation = [
+const adminNavigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Users", href: "/dashboard/users", icon: Users },
   { name: "Questions", href: "/dashboard/questions", icon: BookOpen },
@@ -26,9 +31,35 @@ const navigation = [
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
+const tutorNavigation = [
+  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "My Students", href: "/dashboard/students", icon: Users },
+  { name: "Questions", href: "/dashboard/questions", icon: BookOpen },
+  { name: "Mock Tests", href: "/dashboard/mock-tests", icon: Clock },
+  { name: "Courses", href: "/dashboard/courses", icon: Library },
+  { name: "Analytics", href: "/dashboard/analytics", icon: BarChart2 },
+  { name: "Profile", href: "/dashboard/profile", icon: UserCircle },
+];
+
+const studentNavigation = [
+  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "My Courses", href: "/dashboard/my-courses", icon: BookMarked },
+  { name: "Mock Tests", href: "/dashboard/mock-tests", icon: Clock },
+  { name: "Progress", href: "/dashboard/progress", icon: BarChart2 },
+  { name: "Achievements", href: "/dashboard/achievements", icon: Award },
+  { name: "Profile", href: "/dashboard/profile", icon: UserCircle },
+];
+
 export function Sidebar() {
   const [location] = useLocation();
   const { isOpen, toggle } = useSidebar();
+  const { user } = useUser();
+
+  const navigation = user?.role === "admin" 
+    ? adminNavigation 
+    : user?.role === "tutor" 
+      ? tutorNavigation 
+      : studentNavigation;
 
   return (
     <div
@@ -59,17 +90,18 @@ export function Sidebar() {
             const Icon = item.icon;
             return (
               <Link key={item.name} href={item.href}>
-                <a
+                <Button
+                  variant="ghost"
                   className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                    "w-full justify-start",
                     location === item.href
                       ? "bg-sidebar-accent text-sidebar-accent-foreground"
                       : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
                   )}
                 >
                   <Icon className="h-4 w-4" />
-                  {isOpen && <span>{item.name}</span>}
-                </a>
+                  {isOpen && <span className="ml-3">{item.name}</span>}
+                </Button>
               </Link>
             );
           })}
