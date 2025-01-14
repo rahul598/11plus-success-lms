@@ -15,171 +15,111 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { QuestionEditor } from "./question-editor";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Upload, Pencil, Trash2 } from "lucide-react";
 
 interface Question {
   id: number;
   title: string;
-  content: string;
-  category: string;
-  difficulty: "easy" | "medium" | "hard";
-  points: number;
-  correctAnswer: string;
-  explanation?: string;
-  createdAt: string;
+  options: string[];
+  type: "Fill in the Blanks" | "Text Only";
+  quizName: string;
 }
 
-const categories = [
-  "Mathematics",
-  "Science",
-  "History",
-  "Literature",
-  "Computer Science",
-  "Languages",
+const sortOptions = [
+  { label: "Newest First", value: "newest" },
+  { label: "Oldest First", value: "oldest" },
+  { label: "Title A-Z", value: "title_asc" },
+  { label: "Title Z-A", value: "title_desc" },
 ];
 
 export function QuestionList() {
-  const [search, setSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("all");
-  const [difficultyFilter, setDifficultyFilter] = useState<"all" | "easy" | "medium" | "hard">("all");
-  const [editorOpen, setEditorOpen] = useState(false);
-  const [editingQuestion, setEditingQuestion] = useState<Question | undefined>();
+  const [sortBy, setSortBy] = useState("newest");
 
   const { data: questions = [] } = useQuery<Question[]>({
     queryKey: ["/api/questions"],
   });
 
-  const filteredQuestions = questions.filter((question) => {
-    const matchesSearch =
-      question.title.toLowerCase().includes(search.toLowerCase()) ||
-      question.content.toLowerCase().includes(search.toLowerCase());
-    const matchesCategory =
-      categoryFilter === "all" || question.category === categoryFilter;
-    const matchesDifficulty =
-      difficultyFilter === "all" || question.difficulty === difficultyFilter;
-    return matchesSearch && matchesCategory && matchesDifficulty;
-  });
-
-  const getDifficultyColor = (difficulty: "easy" | "medium" | "hard") => {
-    switch (difficulty) {
-      case "easy":
-        return "bg-green-100 text-green-800";
-      case "medium":
-        return "bg-yellow-100 text-yellow-800";
-      case "hard":
-        return "bg-red-100 text-red-800";
+  const sortedQuestions = [...questions].sort((a, b) => {
+    switch (sortBy) {
+      case "oldest":
+        return a.id - b.id;
+      case "title_asc":
+        return a.title.localeCompare(b.title);
+      case "title_desc":
+        return b.title.localeCompare(a.title);
+      default:
+        return b.id - a.id; // newest first
     }
-  };
-
-  const handleEdit = (question: Question) => {
-    setEditingQuestion({
-      ...question,
-      createdAt: new Date(question.createdAt).toISOString(),
-    });
-    setEditorOpen(true);
-  };
-
-  const handleCreateNew = () => {
-    setEditingQuestion(undefined);
-    setEditorOpen(true);
-  };
+  });
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Questions</h1>
-        <Button onClick={handleCreateNew}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Question
-        </Button>
-      </div>
-
-      <div className="flex gap-4">
-        <Input
-          placeholder="Search questions..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="max-w-xs"
-        />
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filter by category" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All categories</SelectItem>
-            {categories.map((category) => (
-              <SelectItem key={category} value={category}>
-                {category}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filter by difficulty" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All difficulties</SelectItem>
-            <SelectItem value="easy">Easy</SelectItem>
-            <SelectItem value="medium">Medium</SelectItem>
-            <SelectItem value="hard">Hard</SelectItem>
-          </SelectContent>
-        </Select>
+        <h1 className="text-3xl font-bold">All Questions</h1>
+        <div className="flex items-center gap-4">
+          <Button onClick={() => {}}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Question
+          </Button>
+          <Button variant="outline">
+            <Upload className="mr-2 h-4 w-4" />
+            Import Questions
+          </Button>
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Sort By" />
+            </SelectTrigger>
+            <SelectContent>
+              {sortOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Title</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Difficulty</TableHead>
-              <TableHead>Points</TableHead>
-              <TableHead>Created At</TableHead>
-              <TableHead>Actions</TableHead>
+              <TableHead>Question Title</TableHead>
+              <TableHead>Options</TableHead>
+              <TableHead>Question Type</TableHead>
+              <TableHead>Quiz Name</TableHead>
+              <TableHead className="w-[100px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredQuestions.map((question) => (
+            {sortedQuestions.map((question) => (
               <TableRow key={question.id}>
                 <TableCell>{question.title}</TableCell>
-                <TableCell>{question.category}</TableCell>
                 <TableCell>
-                  <Badge className={getDifficultyColor(question.difficulty)}>
-                    {question.difficulty}
-                  </Badge>
+                  {Array.isArray(question.options) ? (
+                    <span className="text-muted-foreground">
+                      [{question.options.join(", ")}]
+                    </span>
+                  ) : null}
                 </TableCell>
-                <TableCell>{question.points}</TableCell>
+                <TableCell>{question.type}</TableCell>
+                <TableCell>{question.quizName}</TableCell>
                 <TableCell>
-                  {new Date(question.createdAt).toLocaleDateString()}
-                </TableCell>
-                <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleEdit(question)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="icon">
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="text-destructive">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </div>
-
-      <QuestionEditor
-        open={editorOpen}
-        onClose={() => {
-          setEditorOpen(false);
-          setEditingQuestion(undefined);
-        }}
-        editingQuestion={editingQuestion}
-      />
     </div>
   );
 }
