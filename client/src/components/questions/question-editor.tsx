@@ -28,7 +28,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { X } from "lucide-react";
+import { X, Upload } from "lucide-react";
 
 const questionSchema = z.object({
   id: z.number().optional(),
@@ -36,7 +36,10 @@ const questionSchema = z.object({
   quizName: z.string().min(1, "Quiz name is required"),
   questionType: z.enum(["Text Only", "True/False", "Images"]),
   questionTitle: z.string().min(1, "Question title is required"),
+  questionImage: z.string().optional(),
+  optionType: z.enum(["Text Only", "Images"]).optional(),
   options: z.array(z.string()).min(2, "At least two options are required"),
+  optionImages: z.array(z.string()).optional(),
   correctAnswer: z.number().min(0, "Correct answer is required"),
   explanation: z.string().optional(),
   createdAt: z.date().optional(),
@@ -65,6 +68,7 @@ export function QuestionEditor({ open, onClose }: QuestionEditorProps) {
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [questionType, setQuestionType] = useState<"Text Only" | "True/False" | "Images">("Text Only");
+  const [optionType, setOptionType] = useState<"Text Only" | "Images">("Text Only");
 
   const form = useForm<QuestionFormValues>({
     resolver: zodResolver(questionSchema),
@@ -73,7 +77,10 @@ export function QuestionEditor({ open, onClose }: QuestionEditorProps) {
       quizName: "",
       questionType: "Text Only",
       questionTitle: "",
+      questionImage: "",
+      optionType: "Text Only",
       options: ["", "", "", ""],
+      optionImages: ["", "", "", ""],
       correctAnswer: 0,
       explanation: "",
     },
@@ -83,8 +90,27 @@ export function QuestionEditor({ open, onClose }: QuestionEditorProps) {
   useEffect(() => {
     if (!open) {
       form.reset();
+      setQuestionType("Text Only");
+      setOptionType("Text Only");
     }
   }, [open, form]);
+
+  const handleImageUpload = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append("image", file);
+
+    const response = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to upload image");
+    }
+
+    const data = await response.json();
+    return data.url;
+  };
 
   const mutation = useMutation({
     mutationFn: async (data: QuestionFormValues) => {
@@ -210,6 +236,9 @@ export function QuestionEditor({ open, onClose }: QuestionEditorProps) {
                       onValueChange={(value: "Text Only" | "True/False" | "Images") => {
                         field.onChange(value);
                         setQuestionType(value);
+                        if (value === "Images") {
+                          setOptionType("Images");
+                        }
                       }}
                       defaultValue={field.value}
                       className="flex space-x-4"
@@ -259,21 +288,160 @@ export function QuestionEditor({ open, onClose }: QuestionEditorProps) {
               )}
             />
 
-            {["A", "B", "C", "D"].map((option, index) => (
+            {questionType === "Images" && (
               <FormField
-                key={option}
                 control={form.control}
-                name={`options.${index}`}
+                name="questionImage"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Option {option}</FormLabel>
+                    <FormLabel>Question Image</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder={`Enter Option ${option}`} />
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              try {
+                                const url = await handleImageUpload(file);
+                                field.onChange(url);
+                              } catch (error) {
+                                toast({
+                                  variant: "destructive",
+                                  title: "Error uploading image",
+                                  description: "Please try again",
+                                });
+                              }
+                            }
+                          }}
+                        />
+                        {field.value && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => field.onChange("")}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+            )}
+
+            {questionType !== "True/False" && (
+              <FormField
+                control={form.control}
+                name="optionType"
+                render={({ field }) => (
+                  <FormItem className="space-y-1">
+                    <FormLabel>Option Type</FormLabel>
+                    <FormControl>
+                      <RadioGroup
+                        onValueChange={(value: "Text Only" | "Images") => {
+                          field.onChange(value);
+                          setOptionType(value);
+                        }}
+                        value={optionType}
+                        className="flex space-x-4"
+                        disabled={questionType === "Images"}
+                      >
+                        <FormItem className="flex items-center space-x-2">
+                          <FormControl>
+                            <RadioGroupItem value="Text Only" />
+                          </FormControl>
+                          <FormLabel className="font-normal">
+                            Text Only
+                          </FormLabel>
+                        </FormItem>
+                        <FormItem className="flex items-center space-x-2">
+                          <FormControl>
+                            <RadioGroupItem value="Images" />
+                          </FormControl>
+                          <FormLabel className="font-normal">
+                            Images
+                          </FormLabel>
+                        </FormItem>
+                      </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {["A", "B", "C", "D"].map((option, index) => (
+              <div key={option} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name={`options.${index}`}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Option {option}</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder={`Enter Option ${option}`} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                {optionType === "Images" && (
+                  <FormField
+                    control={form.control}
+                    name={`optionImages.${index}`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Option {option} Image</FormLabel>
+                        <FormControl>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="file"
+                              accept="image/*"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  try {
+                                    const url = await handleImageUpload(file);
+                                    const images = form.getValues("optionImages") || [];
+                                    images[index] = url;
+                                    form.setValue("optionImages", images);
+                                  } catch (error) {
+                                    toast({
+                                      variant: "destructive",
+                                      title: "Error uploading image",
+                                      description: "Please try again",
+                                    });
+                                  }
+                                }
+                              }}
+                            />
+                            {field.value && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  const images = form.getValues("optionImages") || [];
+                                  images[index] = "";
+                                  form.setValue("optionImages", images);
+                                }}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+              </div>
             ))}
 
             <FormField
