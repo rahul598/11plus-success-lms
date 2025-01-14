@@ -1603,8 +1603,14 @@ export function registerRoutes(app: Express): Server {
   app.get("/api/quizzes", requireAuth, async (_req, res) => {
     try {
       const allQuizzes = await db
-        .select()
+        .select({
+          quiz: quizzes,
+          category: questionCategories,
+          createdBy: users,
+        })
         .from(quizzes)
+        .leftJoin(questionCategories, eq(quizzes.categoryId, questionCategories.id))
+        .leftJoin(users, eq(quizzes.createdBy, users.id))
         .orderBy(desc(quizzes.createdAt));
       res.json(allQuizzes);
     } catch (error: any) {
@@ -1613,7 +1619,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.post("/api/quizzes", requireAuth, requireAdmin, async (req: Request & { user?: Express.User }, res) => {
+  app.post("/api/quizzes", requireAuth, async (req: Request & { user?: Express.User }, res) => {
     if (!req.user) {
       return res.status(401).send("Unauthorized");
     }
@@ -1622,7 +1628,12 @@ export function registerRoutes(app: Express): Server {
       const [quiz] = await db
         .insert(quizzes)
         .values({
-          ...req.body,
+          title: req.body.title,
+          description: req.body.description,
+          categoryId: req.body.categoryId,
+          difficulty: req.body.difficulty,
+          timeLimit: req.body.timeLimit,
+          passingScore: req.body.passingScore,
           createdBy: req.user.id,
         })
         .returning();
@@ -1634,13 +1645,25 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.put("/api/quizzes/:id", requireAuth, requireAdmin, async (req: Request & { user?: Express.User }, res) => {
+  app.put("/api/quizzes/:id", requireAuth, async (req: Request & { user?: Express.User }, res) => {
     if (!req.user) {
       return res.status(401).send("Unauthorized");
     }
 
     try {
       const quizId = parseInt(req.params.id);
+
+      // Check if user owns the quiz or is admin
+      const [existingQuiz] = await db
+        .select()
+        .from(quizzes)
+        .where(eq(quizzes.id, quizId))
+        .limit(1);
+
+      if (!existingQuiz || (existingQuiz.createdBy !== req.user.id && req.user.role !== 'admin')) {
+        return res.status(403).send("Not authorized to edit this quiz");
+      }
+
       const [quiz] = await db
         .update(quizzes)
         .set({
@@ -1650,6 +1673,7 @@ export function registerRoutes(app: Express): Server {
           difficulty: req.body.difficulty,
           timeLimit: req.body.timeLimit,
           passingScore: req.body.passingScore,
+          lastModified: new Date(),
         })
         .where(eq(quizzes.id, quizId))
         .returning();
@@ -1661,13 +1685,51 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  app.delete("/api/quizzes/:id", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+
+    try {
+      const quizId = parseInt(req.params.id);
+
+      // Check if user owns the quiz or is admin
+      const [existingQuiz] = await db
+        .select()
+        .from(quizzes)
+        .where(eq(quizzes.id, quizId))
+        .limit(1);
+
+      if (!existingQuiz || (existingQuiz.createdBy !== req.user.id && req.user.role !== 'admin')) {
+        return res.status(403).send("Not authorized to delete this quiz");
+      }
+
+      // First delete associated quiz questions
+      await db
+        .delete(quizQuestions)
+        .where(eq(quizQuestions.quizId, quizId));
+
+      // Then delete the quiz
+      await db
+        .delete(quizzes)
+        .where(eq(quizzes.id, quizId));
+
+      res.json({ message: "Quiz deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting quiz:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
   app.get("/api/quizzes/:id/questions", requireAuth, async (req, res) => {
     try {
       const quizId = parseInt(req.params.id);
       const quizQuestionsList = await db
         .select({
-          quizQuestion: quizQuestions,
+          id: quizQuestions.id,
           question: questions,
+          orderNumber: quizQuestions.orderNumber,
+          marks: quizQuestions.marks,
         })
         .from(quizQuestions)
         .innerJoin(questions, eq(questions.id, quizQuestions.questionId))
@@ -1681,9 +1743,25 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.post("/api/quizzes/:id/questions", requireAuth, requireAdmin, async (req, res) => {
+  app.post("/api/quizzes/:id/questions", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+
     try {
       const quizId = parseInt(req.params.id);
+
+      // Check if user owns the quiz or is admin
+      const [existingQuiz] = await db
+        .select()
+        .from(quizzes)
+        .where(eq(quizzes.id, quizId))
+        .limit(1);
+
+      if (!existingQuiz || (existingQuiz.createdBy !== req.user.id && req.user.role !== 'admin')) {
+        return res.status(403).send("Not authorized to add questions to this quiz");
+      }
+
       const { questionIds, marks } = req.body;
 
       const existingQuestions = await db

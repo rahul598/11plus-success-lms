@@ -9,15 +9,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Eye } from "lucide-react";
+import { Plus, Pencil, Eye, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import type { Question } from "@db/schema";
 
 const quizSchema = z.object({
   title: z.string().min(1, "Quiz title is required"),
@@ -38,8 +39,9 @@ interface Quiz {
   difficulty: "easy" | "medium" | "hard";
   timeLimit: number;
   passingScore: number;
-  isActive: boolean;
+  createdBy: number;
   createdAt: string;
+  lastModified?: string;
 }
 
 export function QuizManagement() {
@@ -60,8 +62,8 @@ export function QuizManagement() {
     },
   });
 
-  const { data: quizzes, isLoading } = useQuery<Quiz[]>({
-    queryKey: ["quizzes"],
+  const { data: quizzes = [], isLoading } = useQuery<Quiz[]>({
+    queryKey: ["/api/quizzes"],
     queryFn: async () => {
       const response = await fetch("/api/quizzes");
       if (!response.ok) {
@@ -71,8 +73,8 @@ export function QuizManagement() {
     },
   });
 
-  const { data: categories } = useQuery({
-    queryKey: ["question-categories"],
+  const { data: categories = [] } = useQuery({
+    queryKey: ["/api/questions/categories"],
     queryFn: async () => {
       const response = await fetch("/api/questions/categories");
       if (!response.ok) {
@@ -95,7 +97,7 @@ export function QuizManagement() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["quizzes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/quizzes"] });
       toast({ title: "Quiz created successfully" });
       setIsOpen(false);
       form.reset();
@@ -122,7 +124,7 @@ export function QuizManagement() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["quizzes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/quizzes"] });
       toast({ title: "Quiz updated successfully" });
       setIsOpen(false);
       setEditingQuiz(null);
@@ -137,11 +139,40 @@ export function QuizManagement() {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (quizId: number) => {
+      const response = await fetch(`/api/quizzes/${quizId}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/quizzes"] });
+      toast({ title: "Quiz deleted successfully" });
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Error deleting quiz",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+      });
+    },
+  });
+
   const onSubmit = async (data: QuizFormData) => {
     if (editingQuiz) {
       await updateMutation.mutateAsync({ ...data, id: editingQuiz.id });
     } else {
       await createMutation.mutateAsync(data);
+    }
+  };
+
+  const handleDelete = async (quizId: number) => {
+    if (window.confirm("Are you sure you want to delete this quiz?")) {
+      await deleteMutation.mutateAsync(quizId);
     }
   };
 
@@ -153,131 +184,140 @@ export function QuizManagement() {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Quizzes</h2>
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Quiz
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {editingQuiz ? "Edit Quiz" : "Add New Quiz"}
-              </DialogTitle>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="title"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Title</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="categoryId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Category</FormLabel>
-                      <Select
-                        value={field.value.toString()}
-                        onValueChange={(value) => field.onChange(parseInt(value))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {categories?.map((category) => (
-                            <SelectItem key={category.id} value={category.id.toString()}>
-                              {category.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="difficulty"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Difficulty</FormLabel>
-                      <Select
-                        value={field.value}
-                        onValueChange={field.onChange}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="easy">Easy</SelectItem>
-                          <SelectItem value="medium">Medium</SelectItem>
-                          <SelectItem value="hard">Hard</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="timeLimit"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Time Limit (minutes)</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value))}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="passingScore"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Passing Score (%)</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value))}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-                <Button type="submit">
-                  {editingQuiz ? "Update" : "Create"}
-                </Button>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+        <Button onClick={() => {
+          setEditingQuiz(null);
+          form.reset();
+          setIsOpen(true);
+        }}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Quiz
+        </Button>
       </div>
+
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editingQuiz ? "Edit Quiz" : "Add New Quiz"}
+            </DialogTitle>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Title</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="categoryId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Category</FormLabel>
+                    <Select
+                      value={field.value.toString()}
+                      onValueChange={(value) => field.onChange(parseInt(value))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories?.map((category: any) => (
+                          <SelectItem key={category.id} value={category.id.toString()}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="difficulty"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Difficulty</FormLabel>
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="easy">Easy</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="hard">Hard</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="timeLimit"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Time Limit (minutes)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        {...field}
+                        onChange={(e) => field.onChange(parseInt(e.target.value))}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="passingScore"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Passing Score (%)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        {...field}
+                        onChange={(e) => field.onChange(parseInt(e.target.value))}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit">
+                {editingQuiz ? "Update" : "Create"}
+              </Button>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
 
       <div className="rounded-md border">
         <Table>
@@ -303,7 +343,7 @@ export function QuizManagement() {
                 <TableRow key={quiz.id}>
                   <TableCell>{quiz.title}</TableCell>
                   <TableCell>
-                    {categories?.find((c) => c.id === quiz.categoryId)?.name}
+                    {categories?.find((c: any) => c.id === quiz.categoryId)?.name}
                   </TableCell>
                   <TableCell className="capitalize">{quiz.difficulty}</TableCell>
                   <TableCell>{quiz.timeLimit} minutes</TableCell>
@@ -326,6 +366,13 @@ export function QuizManagement() {
                       }}
                     >
                       <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDelete(quiz.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                     <Button
                       variant="ghost"
