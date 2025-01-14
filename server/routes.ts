@@ -157,10 +157,10 @@ export function registerRoutes(app: Express): Server {
           AVG(sp.progress) as "averageProgress",
           COUNT(CASE WHEN sp.progress = 100 THEN 1 END)::float / 
             NULLIF(COUNT(sp.user_id), 0) * 100 as "completionRate",
-          COALESCE(SUM(p.amount::numeric), 0) as revenue
+          COALESCE(SUM(CASE WHEN p.status = 'completed' THEN p.amount::numeric ELSE 0 END), 0) as revenue
         FROM courses c
         LEFT JOIN student_progress sp ON c.id = sp.course_id
-        LEFT JOIN payments p ON c.id = p.course_id AND p.status = 'completed'
+        LEFT JOIN payments p ON p.user_id = sp.user_id
         GROUP BY c.id, c.title
       )
       SELECT *
