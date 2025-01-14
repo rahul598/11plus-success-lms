@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { db } from "@db";
 import { users, questions, courses, tutors, payments, studentProgress, media } from "@db/schema";
-import { eq, desc, and, sql } from "drizzle-orm";
+import { eq, desc, and, sql, not, exists } from "drizzle-orm";
 import multer from "multer";
 import { parse } from "csv-parse";
 import { stringify } from "csv-stringify";
@@ -627,6 +627,221 @@ export function registerRoutes(app: Express): Server {
 
     res.json({ message: "Media deleted successfully" });
   });
+
+  // Student Engagement Routes
+  app.get("/api/student/engagement", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+
+    const [engagement] = await db
+      .select()
+      .from(studentEngagement)
+      .where(eq(studentEngagement.userId, req.user.id))
+      .limit(1);
+
+    if (!engagement) {
+      // Create initial engagement record if it doesn't exist
+      const [newEngagement] = await db
+        .insert(studentEngagement)
+        .values({
+          userId: req.user.id,
+          lastLogin: new Date(),
+        })
+        .returning();
+
+      return res.json(newEngagement);
+    }
+
+    // Update login streak and last login
+    const lastLoginDate = new Date(engagement.lastLogin);
+    const today = new Date();
+    const daysSinceLastLogin = Math.floor((today.getTime() - lastLoginDate.getTime()) / (1000 * 60 * 60 * 24));
+
+    let loginStreak = engagement.loginStreak;
+    if (daysSinceLastLogin === 1) {
+      loginStreak += 1;
+    } else if (daysSinceLastLogin > 1) {
+      loginStreak = 1;
+    }
+
+    const [updatedEngagement] = await db
+      .update(studentEngagement)
+      .set({
+        lastLogin: today,
+        loginStreak,
+      })
+      .where(eq(studentEngagement.userId, req.user.id))
+      .returning();
+
+    res.json(updatedEngagement);
+  });
+
+  // Achievements Routes
+  app.get("/api/achievements", requireAuth, async (_req, res) => {
+    const allAchievements = await db
+      .select()
+      .from(achievements)
+      .orderBy(achievements.type);
+
+    res.json(allAchievements);
+  });
+
+  app.get("/api/student/achievements", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+
+    const userAchievements = await db
+      .select({
+        id: studentAchievements.id,
+        achievement: {
+          id: achievements.id,
+          name: achievements.name,
+          description: achievements.description,
+          icon: achievements.icon,
+          type: achievements.type,
+          requiredValue: achievements.requiredValue,
+        },
+        unlockedAt: studentAchievements.unlockedAt,
+        progress: studentAchievements.progress,
+      })
+      .from(studentAchievements)
+      .innerJoin(achievements, eq(achievements.id, studentAchievements.achievementId))
+      .where(eq(studentAchievements.userId, req.user.id))
+      .orderBy(desc(studentAchievements.unlockedAt));
+
+    res.json(userAchievements);
+  });
+
+  // Rewards Routes
+  app.get("/api/rewards", requireAuth, async (_req, res) => {
+    const allRewards = await db
+      .select()
+      .from(rewards)
+      .orderBy(rewards.type);
+
+    res.json(allRewards);
+  });
+
+  app.get("/api/student/rewards", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+
+    const userRewards = await db
+      .select({
+        id: studentRewards.id,
+        reward: {
+          id: rewards.id,
+          name: rewards.name,
+          description: rewards.description,
+          type: rewards.type,
+        },
+        earnedAt: studentRewards.earnedAt,
+        status: studentRewards.status,
+      })
+      .from(studentRewards)
+      .innerJoin(rewards, eq(rewards.id, studentRewards.rewardId))
+      .where(eq(studentRewards.userId, req.user.id))
+      .orderBy(desc(studentRewards.earnedAt));
+
+    res.json(userRewards);
+  });
+
+  // Update student engagement metrics
+  app.post("/api/student/engagement/update", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+
+    const { timeSpent, lessonsCompleted, questionsAnswered, correctAnswers } = req.body;
+
+    const [engagement] = await db
+      .select()
+      .from(studentEngagement)
+      .where(eq(studentEngagement.userId, req.user.id))
+      .limit(1);
+
+    if (!engagement) {
+      return res.status(404).send("Student engagement record not found");
+    }
+
+    // Update engagement metrics
+    const [updatedEngagement] = await db
+      .update(studentEngagement)
+      .set({
+        totalTimeSpent: sql`${studentEngagement.totalTimeSpent} + ${timeSpent || 0}`,
+        completedLessons: sql`${studentEngagement.completedLessons} + ${lessonsCompleted || 0}`,
+        questionsAnswered: sql`${studentEngagement.questionsAnswered} + ${questionsAnswered || 0}`,
+        correctAnswers: sql`${studentEngagement.correctAnswers} + ${correctAnswers || 0}`,
+        participationScore: sql`(${studentEngagement.correctAnswers} + ${correctAnswers || 0})::decimal / NULLIF(${studentEngagement.questionsAnswered} + ${questionsAnswered || 0}, 0) * 100`,
+        lastUpdated: new Date(),
+      })
+      .where(eq(studentEngagement.userId, req.user.id))
+      .returning();
+
+    // Check for new achievements
+    await checkAndAwardAchievements(req.user.id, updatedEngagement);
+
+    res.json(updatedEngagement);
+  });
+
+  // Helper function to check and award achievements
+  async function checkAndAwardAchievements(userId: number, engagement: typeof studentEngagement.$inferSelect) {
+    const allAchievements = await db
+      .select()
+      .from(achievements)
+      .where(
+        and(
+          not(
+            exists(
+              db
+                .select()
+                .from(studentAchievements)
+                .where(
+                  and(
+                    eq(studentAchievements.userId, userId),
+                    eq(studentAchievements.achievementId, achievements.id)
+                  )
+                )
+            )
+          )
+        )
+      );
+
+    for (const achievement of allAchievements) {
+      let progress = 0;
+      let achieved = false;
+
+      switch (achievement.type) {
+        case "login_streak":
+          progress = engagement.loginStreak;
+          achieved = progress >= achievement.requiredValue;
+          break;
+        case "completion":
+          progress = engagement.completedLessons;
+          achieved = progress >= achievement.requiredValue;
+          break;
+        case "grade":
+          progress = Math.floor(engagement.participationScore);
+          achieved = progress >= achievement.requiredValue;
+          break;
+        case "participation":
+          progress = engagement.questionsAnswered;
+          achieved = progress >= achievement.requiredValue;
+          break;
+      }
+
+      if (achieved) {
+        await db.insert(studentAchievements).values({
+          userId,
+          achievementId: achievement.id,
+          progress,
+        });
+      }
+    }
+  }
 
   const httpServer = createServer(app);
   return httpServer;

@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, decimal } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, decimal, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 
 export const users = pgTable("users", {
@@ -61,11 +61,65 @@ export const media = pgTable("media", {
   id: serial("id").primaryKey(),
   url: text("url").notNull(),
   filename: text("filename").notNull(),
-  category: text("category", { 
-    enum: ["Mathematics", "Science", "Chemistry", "Reasoning"] 
+  category: text("category", {
+    enum: ["Mathematics", "Science", "Chemistry", "Reasoning"]
   }).notNull(),
   createdBy: integer("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const achievements = pgTable("achievements", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  icon: text("icon").notNull(),
+  type: text("type", {
+    enum: ["login_streak", "completion", "grade", "participation"]
+  }).notNull(),
+  requiredValue: integer("required_value").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const studentAchievements = pgTable("student_achievements", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  achievementId: integer("achievement_id").references(() => achievements.id).notNull(),
+  unlockedAt: timestamp("unlocked_at").defaultNow().notNull(),
+  progress: integer("progress").notNull().default(0),
+});
+
+export const studentEngagement = pgTable("student_engagement", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  loginStreak: integer("login_streak").notNull().default(0),
+  lastLogin: timestamp("last_login").notNull(),
+  totalTimeSpent: integer("total_time_spent").notNull().default(0), // in minutes
+  completedLessons: integer("completed_lessons").notNull().default(0),
+  questionsAnswered: integer("questions_answered").notNull().default(0),
+  correctAnswers: integer("correct_answers").notNull().default(0),
+  participationScore: decimal("participation_score", { precision: 5, scale: 2 }).notNull().default("0"),
+  lastUpdated: timestamp("last_updated").defaultNow().notNull(),
+});
+
+export const rewards = pgTable("rewards", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  type: text("type", {
+    enum: ["badge", "certificate", "bonus_points", "special_access"]
+  }).notNull(),
+  requirements: jsonb("requirements").notNull(), // JSON structure for complex requirements
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const studentRewards = pgTable("student_rewards", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  rewardId: integer("reward_id").references(() => rewards.id).notNull(),
+  earnedAt: timestamp("earned_at").defaultNow().notNull(),
+  status: text("status", {
+    enum: ["active", "expired", "consumed"]
+  }).notNull().default("active"),
 });
 
 export const insertUserSchema = createInsertSchema(users);
@@ -102,3 +156,28 @@ export const insertMediaSchema = createInsertSchema(media);
 export const selectMediaSchema = createSelectSchema(media);
 export type InsertMedia = typeof media.$inferInsert;
 export type SelectMedia = typeof media.$inferSelect;
+
+export const insertAchievementSchema = createInsertSchema(achievements);
+export const selectAchievementSchema = createSelectSchema(achievements);
+export type InsertAchievement = typeof achievements.$inferInsert;
+export type SelectAchievement = typeof achievements.$inferSelect;
+
+export const insertStudentAchievementSchema = createInsertSchema(studentAchievements);
+export const selectStudentAchievementSchema = createSelectSchema(studentAchievements);
+export type InsertStudentAchievement = typeof studentAchievements.$inferInsert;
+export type SelectStudentAchievement = typeof studentAchievements.$inferSelect;
+
+export const insertEngagementSchema = createInsertSchema(studentEngagement);
+export const selectEngagementSchema = createSelectSchema(studentEngagement);
+export type InsertEngagement = typeof studentEngagement.$inferInsert;
+export type SelectEngagement = typeof studentEngagement.$inferSelect;
+
+export const insertRewardSchema = createInsertSchema(rewards);
+export const selectRewardSchema = createSelectSchema(rewards);
+export type InsertReward = typeof rewards.$inferInsert;
+export type SelectReward = typeof rewards.$inferSelect;
+
+export const insertStudentRewardSchema = createInsertSchema(studentRewards);
+export const selectStudentRewardSchema = createSelectSchema(studentRewards);
+export type InsertStudentReward = typeof studentRewards.$inferInsert;
+export type SelectStudentReward = typeof studentRewards.$inferSelect;
