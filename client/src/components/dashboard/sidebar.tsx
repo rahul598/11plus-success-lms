@@ -92,6 +92,14 @@ export function Sidebar() {
       )}
     >
       <div className="flex h-14 items-center border-b px-3">
+        <div className={cn("overflow-hidden transition-all duration-300", 
+          isOpen ? "w-40" : "w-0")}>
+          <img 
+            src="https://vinsonedge.com/wp-content/uploads/2025/01/Logo-3.png" 
+            alt="Vinsonedge Logo"
+            className="h-8"
+          />
+        </div>
         <Button
           variant="ghost"
           size="icon"
