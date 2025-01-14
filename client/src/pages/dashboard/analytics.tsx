@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
+import { Download, Clock } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -174,12 +174,12 @@ export default function Analytics() {
                   <YAxis />
                   <Tooltip />
                   <Legend />
-                  <Line 
-                    type="monotone" 
-                    dataKey="count" 
+                  <Line
+                    type="monotone"
+                    dataKey="count"
                     name="New Users"
-                    stroke="var(--primary)" 
-                    strokeWidth={2} 
+                    stroke="var(--primary)"
+                    strokeWidth={2}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -202,17 +202,17 @@ export default function Analytics() {
                   <YAxis yAxisId="right" orientation="right" />
                   <Tooltip />
                   <Legend />
-                  <Bar 
+                  <Bar
                     yAxisId="left"
-                    dataKey="completionRate" 
+                    dataKey="completionRate"
                     name="Completion Rate (%)"
-                    fill="var(--primary)" 
+                    fill="var(--primary)"
                   />
-                  <Bar 
+                  <Bar
                     yAxisId="right"
-                    dataKey="totalEnrollments" 
+                    dataKey="totalEnrollments"
                     name="Total Enrollments"
-                    fill="var(--secondary)" 
+                    fill="var(--secondary)"
                   />
                 </BarChart>
               </ResponsiveContainer>
@@ -265,10 +265,10 @@ export default function Analytics() {
                   <YAxis />
                   <Tooltip />
                   <Legend />
-                  <Bar 
-                    dataKey="successRate" 
+                  <Bar
+                    dataKey="successRate"
                     name="Success Rate (%)"
-                    fill="var(--primary)" 
+                    fill="var(--primary)"
                   />
                 </BarChart>
               </ResponsiveContainer>
@@ -291,21 +291,21 @@ export default function Analytics() {
                   <YAxis yAxisId="right" orientation="right" />
                   <Tooltip />
                   <Legend />
-                  <Line 
+                  <Line
                     yAxisId="left"
-                    type="monotone" 
-                    dataKey="revenue" 
+                    type="monotone"
+                    dataKey="revenue"
                     name="Revenue ($)"
-                    stroke="var(--primary)" 
-                    strokeWidth={2} 
+                    stroke="var(--primary)"
+                    strokeWidth={2}
                   />
-                  <Line 
+                  <Line
                     yAxisId="right"
-                    type="monotone" 
-                    dataKey="transactionCount" 
+                    type="monotone"
+                    dataKey="transactionCount"
                     name="Transactions"
-                    stroke="var(--secondary)" 
-                    strokeWidth={2} 
+                    stroke="var(--secondary)"
+                    strokeWidth={2}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -328,21 +328,21 @@ export default function Analytics() {
                   <YAxis yAxisId="right" orientation="right" />
                   <Tooltip />
                   <Legend />
-                  <Line 
+                  <Line
                     yAxisId="left"
-                    type="monotone" 
-                    dataKey="activeUsers" 
+                    type="monotone"
+                    dataKey="activeUsers"
                     name="Active Users"
-                    stroke="var(--primary)" 
-                    strokeWidth={2} 
+                    stroke="var(--primary)"
+                    strokeWidth={2}
                   />
-                  <Line 
+                  <Line
                     yAxisId="right"
-                    type="monotone" 
-                    dataKey="averageTimeSpent" 
+                    type="monotone"
+                    dataKey="averageTimeSpent"
                     name="Avg. Time (min)"
-                    stroke="var(--secondary)" 
-                    strokeWidth={2} 
+                    stroke="var(--secondary)"
+                    strokeWidth={2}
                   />
                 </LineChart>
               </ResponsiveContainer>
