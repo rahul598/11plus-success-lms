@@ -1,0 +1,59 @@
+Develop an e-commerce system exclusively available within the admin dashboard, allowing admins to upload, manage, and sell digital products like PDFs, exams, or study materials directly to users. The system should include the following features:
+
+Admin Dashboard Features:
+1. Product Management:
+Admin can upload, edit, and delete digital products (e.g., PDFs, exams).
+Fields for product details:
+Title
+Description
+Price
+Category (e.g., Subject, Topic)
+File Upload (Secure file storage for PDFs or exam files).
+Ability to mark products as active/inactive for display to users.
+2. Order Management:
+Display all orders with the following details:
+Order ID
+Product Name
+Buyer Name and Email
+Purchase Date
+Payment Status (Paid, Pending, Failed).
+Option to manually refund payments if necessary.
+3. Payment Gateway Integration:
+Integrate both Stripe and PayPal as payment options for users.
+Ensure secure payment processing and support for multiple currencies.
+Display a transaction log for all completed payments, including:
+Payment Method (Stripe/PayPal).
+Amount Paid.
+Transaction ID.
+Include error handling for failed payments and notify the admin.
+4. Sales and Revenue Reports:
+Show detailed sales analytics, such as:
+Total sales (by product or time period).
+Revenue earned (Stripe vs. PayPal breakdown).
+Most popular products.
+Exportable reports in formats like CSV or Excel.
+5. Secure Digital Delivery:
+Upon successful payment, automatically deliver the purchased digital products to users via:
+Email Link to download the product.
+User Dashboard Access (optional, if user accounts exist).
+Ensure file download links expire after a defined period (e.g., 24 hours).
+6. Notifications and Alerts:
+Notify admin of new purchases via email or within the dashboard.
+Send automated confirmation emails to users after payment with product details and download links.
+Core Functionalities:
+Stripe and PayPal Integration:
+Allow users to choose between Stripe or PayPal during checkout.
+Handle recurring or one-time payments securely.
+Support refund processing directly through the admin dashboard.
+Role-Based Access Control:
+Restrict access to the e-commerce module to admin users only.
+Ensure no other roles or users can view or manage products/orders.
+Scalability and Security:
+Use encrypted storage for product files to prevent unauthorized access.
+Ensure scalability to handle high volumes of transactions and file downloads.
+Use Case Example:
+The admin uploads a PDF-based practice exam priced at $50 through the dashboard.
+A user purchases the product by selecting Stripe or PayPal during checkout.
+After payment confirmation, the system sends a download link for the PDF to the user's email.
+The admin sees the completed order in the dashboard with all transaction details.
+Sales reports for the month show total revenue, payment method breakdown, and product performance.
