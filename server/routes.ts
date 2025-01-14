@@ -2,12 +2,9 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { db } from "@db";
-import { users, questions, courses, tutors, payments, studentProgress, media } from "@db/schema";
+import { users, questions, courses, tutors, payments, studentProgress, media, achievements, rewards, studentAchievements, studentRewards, studentEngagement } from "@db/schema";
 import { eq, desc, and, sql, not, exists } from "drizzle-orm";
 import multer from "multer";
-import { parse } from "csv-parse";
-import { stringify } from "csv-stringify";
-import { Readable } from "stream";
 
 // Configure multer for file uploads
 const upload = multer({ storage: multer.memoryStorage() });
@@ -76,19 +73,49 @@ export function registerRoutes(app: Express): Server {
 
   // Questions
   app.get("/api/questions", requireAuth, async (_req, res) => {
-    const allQuestions = await db.select().from(questions).orderBy(desc(questions.createdAt));
-    res.json(allQuestions);
+    try {
+      const allQuestions = await db
+        .select()
+        .from(questions)
+        .orderBy(desc(questions.createdAt));
+
+      res.json(allQuestions);
+    } catch (error: any) {
+      console.error("Error fetching questions:", error);
+      res.status(500).send(error.message);
+    }
   });
 
   app.post("/api/questions", requireAuth, async (req: Request & { user?: Express.User }, res) => {
     if (!req.user) {
       return res.status(401).send("Unauthorized");
     }
-    const [question] = await db
-      .insert(questions)
-      .values({ ...req.body, createdBy: req.user.id })
-      .returning();
-    res.json(question);
+
+    try {
+      const [question] = await db
+        .insert(questions)
+        .values({
+          title: req.body.title,
+          content: req.body.content,
+          category: req.body.category,
+          subCategory: req.body.subCategory,
+          difficulty: req.body.difficulty,
+          questionType: req.body.questionType,
+          contentType: req.body.contentType,
+          options: req.body.options,
+          correctAnswer: req.body.correctAnswer,
+          explanation: req.body.explanation,
+          hints: req.body.hints || [],
+          metadata: req.body.metadata || {},
+          createdBy: req.user.id
+        })
+        .returning();
+
+      res.json(question);
+    } catch (error: any) {
+      console.error("Error creating question:", error);
+      res.status(500).send(error.message);
+    }
   });
 
   // Courses

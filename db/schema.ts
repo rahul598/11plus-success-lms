@@ -16,9 +16,9 @@ export const questions = pgTable("questions", {
   title: text("title").notNull(),
   content: text("content").notNull(),
   category: text("category", { 
-    enum: ["Non-Verbal Reasoning", "Verbal Reasoning", "English", "Mathematics", "General"] 
+    enum: ["Non-Verbal Reasoning", "Verbal Reasoning", "English", "Mathematics"] 
   }).notNull(),
-  subCategory: text("sub_category", {
+  subCategory: text("subcategory", {
     enum: [
       // NVR subcategories
       "Pattern Series", "Figure Analysis", "Mirror Images", "Paper Folding", 
@@ -40,7 +40,7 @@ export const questions = pgTable("questions", {
       "mixed"
     ] 
   }).notNull(),
-  content_type: jsonb("content_type").notNull().default({
+  contentType: jsonb("content_type").notNull().default({
     hasFormula: false,
     hasImage: false,
     hasPattern: false,
