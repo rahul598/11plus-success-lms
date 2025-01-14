@@ -28,6 +28,7 @@ const adminNavigation = [
   { name: "Payments", href: "/dashboard/payments", icon: CreditCard },
   { name: "Tutors", href: "/dashboard/tutors", icon: GraduationCap },
   { name: "Courses", href: "/dashboard/courses", icon: Library },
+  { name: "Mock Tests", href: "/dashboard/mock-tests", icon: Clock },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 

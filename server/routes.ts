@@ -37,6 +37,168 @@ function requireAdmin(req: Request, res: Response, next: Function) {
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
+  // Mock Test Management Routes for Admin
+  app.get("/api/admin/mock-tests", requireAdmin, async (_req, res) => {
+    try {
+      const allTests = await db
+        .select({
+          id: mockTests.id,
+          title: mockTests.title,
+          description: mockTests.description,
+          type: mockTests.type,
+          duration: mockTests.duration,
+          totalQuestions: mockTests.totalQuestions,
+          createdBy: mockTests.createdBy,
+          createdAt: mockTests.createdAt,
+          scheduledFor: mockTests.scheduledFor,
+          status: mockTests.status
+        })
+        .from(mockTests)
+        .orderBy(desc(mockTests.createdAt));
+
+      res.json(allTests);
+    } catch (error: any) {
+      console.error("Error fetching mock tests:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.post("/api/admin/mock-tests", requireAdmin, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+
+    try {
+      const [mockTest] = await db
+        .insert(mockTests)
+        .values({
+          title: req.body.title,
+          description: req.body.description,
+          type: req.body.type,
+          duration: req.body.duration,
+          totalQuestions: req.body.totalQuestions,
+          rules: req.body.rules || [],
+          createdBy: req.user.id,
+          status: "draft",
+          scheduledFor: new Date(req.body.scheduledFor)
+        })
+        .returning();
+
+      res.json(mockTest);
+    } catch (error: any) {
+      console.error("Error creating mock test:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  // Get mock test details with questions
+  app.get("/api/admin/mock-tests/:id", requireAdmin, async (req, res) => {
+    try {
+      const testId = parseInt(req.params.id);
+
+      const [mockTest] = await db
+        .select()
+        .from(mockTests)
+        .where(eq(mockTests.id, testId))
+        .limit(1);
+
+      if (!mockTest) {
+        return res.status(404).send("Mock test not found");
+      }
+
+      const questions = await db
+        .select()
+        .from(mockTestQuestions)
+        .where(eq(mockTestQuestions.mockTestId, testId))
+        .orderBy(mockTestQuestions.questionOrder);
+
+      res.json({ ...mockTest, questions });
+    } catch (error: any) {
+      console.error("Error fetching mock test details:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  // Update mock test status
+  app.patch("/api/admin/mock-tests/:id/status", requireAdmin, async (req, res) => {
+    try {
+      const testId = parseInt(req.params.id);
+      const { status } = req.body;
+
+      const [updatedTest] = await db
+        .update(mockTests)
+        .set({ status })
+        .where(eq(mockTests.id, testId))
+        .returning();
+
+      if (!updatedTest) {
+        return res.status(404).send("Mock test not found");
+      }
+
+      res.json(updatedTest);
+    } catch (error: any) {
+      console.error("Error updating mock test status:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  // Add questions to mock test
+  app.post("/api/admin/mock-tests/:id/questions", requireAdmin, async (req, res) => {
+    try {
+      const testId = parseInt(req.params.id);
+      const { questions } = req.body;
+
+      const insertedQuestions = await db
+        .insert(mockTestQuestions)
+        .values(
+          questions.map((q: any, index: number) => ({
+            mockTestId: testId,
+            questionText: q.questionText,
+            options: q.options,
+            correctAnswer: q.correctAnswer,
+            marks: q.marks,
+            questionOrder: index + 1,
+            category: q.category,
+            difficulty: q.difficulty
+          }))
+        )
+        .returning();
+
+      res.json(insertedQuestions);
+    } catch (error: any) {
+      console.error("Error adding questions to mock test:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  // Get mock test sessions and results
+  app.get("/api/admin/mock-tests/:id/sessions", requireAdmin, async (req, res) => {
+    try {
+      const testId = parseInt(req.params.id);
+
+      const sessions = await db
+        .select({
+          id: mockTestSessions.id,
+          userId: mockTestSessions.userId,
+          startTime: mockTestSessions.startTime,
+          endTime: mockTestSessions.endTime,
+          score: mockTestSessions.score,
+          status: mockTestSessions.status,
+          username: users.username
+        })
+        .from(mockTestSessions)
+        .innerJoin(users, eq(users.id, mockTestSessions.userId))
+        .where(eq(mockTestSessions.mockTestId, testId))
+        .orderBy(desc(mockTestSessions.startTime));
+
+      res.json(sessions);
+    } catch (error: any) {
+      console.error("Error fetching mock test sessions:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+
   // Stats endpoint for admin dashboard
   app.get("/api/stats", requireAdmin, async (_req, res) => {
     const [userCount] = await db
@@ -87,7 +249,7 @@ export function registerRoutes(app: Express): Server {
           eq(courses.published, true)
         ));
 
-      const [mockTests] = await db
+      const [mockTestsCount] = await db
         .select({ count: sql<number>`count(*)` })
         .from(mockTests)
         .where(eq(mockTests.createdBy, req.user.id));
@@ -102,7 +264,7 @@ export function registerRoutes(app: Express): Server {
       res.json({
         totalStudents: totalStudents.count || 0,
         activeCourses: activeCourses.count || 0,
-        mockTests: mockTests.count || 0,
+        mockTests: mockTestsCount.count || 0,
         averageRating: averageRating || 0,
       });
     } catch (error: any) {
