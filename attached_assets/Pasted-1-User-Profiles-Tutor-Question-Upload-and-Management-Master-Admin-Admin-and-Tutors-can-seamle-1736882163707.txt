@@ -1,0 +1,28 @@
+1. User Profiles
+Tutor:
+○ Question Upload and Management: Master Admin, Admin, and Tutors can
+seamlessly upload questions for Non-Verbal Reasoning (NVR), Verbal Reasoning, English, and Mathematics. The platform will incorporate advanced tools to simplify this process, particularly for NVR questions, which require specialized support. A thorough discussion is recommended to ensure all requirements are fully understood and documented.
+○ Mock Test Generation: Tutors will have the capability to generate mock tests tailored to specific requirements. This includes:
+■ Creating subject-specific mock tests (e.g., 10 questions in each subject or 50 questions in each subject).
+■ Designing mixed mock tests that combine questions from multiple subjects, adhering to customizable business rules (e.g., including one question from each sub-topic, a few questions from certain subtopics, or multiple questions from all sub-topic from subjects).
+○ Test Assignment with Unique Reference: Generated mock tests can be assigned to individual students or groups. Each assigned test will include a unique reference code, enabling seamless identification and linking of answer sheets when uploaded with Students.
+○ Automated Answer Sheet Upload and Grading: The system will provide functionality to upload scanned answer sheets via the web or mobile app.
+  
+Uploaded sheets will be automatically graded, and detailed feedback will be generated for each student, offering actionable insights on performance.
+○ Reporting:
+■ Comprehensive Performance Reporting:
+Tutors will have access to detailed, data-rich reports that provide insights into each student's performance trends since their initial engagement with the platform.
+■ Historical Performance Analysis:
+The reporting system will track and visualize performance improvements over time, helping tutors identify areas of progress and those requiring additional focus.
+■ Topic-Specific Insights:
+Reports will break down student performance by specific subjects and subtopics (e.g., Non-Verbal Reasoning, Verbal Reasoning, English and Mathematics), enabling targeted interventions.
+■ Comparative Analytics:
+Tutors can compare a student’s performance with class averages, peer groups, or predefined benchmarks to identify relative strengths and weaknesses.
+■ Customized Reporting:
+The system will allow tutors to generate custom reports based on specific criteria, such as date ranges, topics, or test types, ensuring flexibility and precision.
+■ Actionable Recommendations:
+Reports will include AI-driven recommendations for tailored practice plans, focusing on areas where students face consistent challenges.
+■ Export and Sharing Options:
+Tutors can export reports in various formats (e.g., PDF, Excel) and share them directly with parents or other stakeholders for collaborative progress reviews.
+■ Attendance and Engagement Metrics:
+Insights on a student’s engagement level, including participation in mock exams and time spent on practice resources, to provide a holistic view of their commitment and progress.

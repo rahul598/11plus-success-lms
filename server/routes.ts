@@ -6,6 +6,7 @@ import { users, questions, courses, tutors, payments, studentProgress, media, ac
 import { eq, desc, and, sql, not, exists } from "drizzle-orm";
 import multer from "multer";
 import { stringify } from "csv-stringify";
+import {parse} from 'csv-parse'
 
 // Configure multer for file uploads
 const upload = multer({ storage: multer.memoryStorage() });
@@ -966,7 +967,7 @@ export function registerRoutes(app: Express): Server {
 
   // Mock Test Management Routes
   app.get("/api/mock-tests", requireAuth, async (_req, res) => {
-        try {
+    try {
       const allTests = await db
         .select()
         .from(mockTests)
@@ -1366,6 +1367,118 @@ export function registerRoutes(app: Express): Server {
     }
     return "conceptual_error";
   }
+  // Mock Test Generation Routes
+  app.post("/api/mock-tests/generate", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+
+    try {
+      const { type, totalQuestions, rules } = req.body;
+
+      let selectedQuestions: typeof questions.$inferSelect[] = [];
+
+      // For subject-specific tests, select questions from one subject
+      if (type === "subject_specific") {
+        selectedQuestions = await db
+          .select()
+          .from(questions)
+          .where(eq(questions.category, rules.category))
+          .orderBy(sql`RANDOM()`)
+          .limit(totalQuestions);
+      }
+      // For mixed tests, handle the distribution across subjects
+      else if (type === "mixed") {
+        for (const [category, count] of Object.entries(rules.categoryDistribution)) {
+          // For each subject, get specified number of questions
+          const subjectQuestions = await db
+            .select()
+            .from(questions)
+            .where(eq(questions.category, category))
+            .orderBy(sql`RANDOM()`)
+            .limit(count as number);
+
+          selectedQuestions = [...selectedQuestions, ...subjectQuestions];
+        }
+
+        // If subtopic distribution is specified, ensure questions from each subtopic
+        if (rules.subTopicDistribution) {
+          selectedQuestions = [];
+          for (const [category, subtopics] of Object.entries(rules.subTopicDistribution)) {
+            for (const [subcategory, count] of Object.entries(subtopics)) {
+              const subtopicQuestions = await db
+                .select()
+                .from(questions)
+                .where(
+                  and(
+                    eq(questions.category, category),
+                    eq(questions.subCategory, subcategory)
+                  )
+                )
+                .orderBy(sql`RANDOM()`)
+                .limit(count as number);
+
+              selectedQuestions = [...selectedQuestions, ...subtopicQuestions];
+            }
+          }
+        }
+      }
+
+      if (selectedQuestions.length < totalQuestions) {
+        return res.status(400).send("Not enough questions available for the specified criteria");
+      }
+
+      // Create the mock test
+      const [mockTest] = await db
+        .insert(mockTests)
+        .values({
+          title: req.body.title,
+          description: req.body.description || "",
+          type,
+          duration: req.body.duration,
+          totalQuestions,
+          rules: rules,
+          createdBy: req.user.id,
+        })
+        .returning();
+
+      // Add questions to the mock test
+      await Promise.all(
+        selectedQuestions.map((question, index) =>
+          db.insert(mockTestQuestions).values({
+            mockTestId: mockTest.id,
+            questionId: question.id,
+            orderNumber: index + 1,
+            marks: rules.marksDistribution?.[question.difficulty] || 1,
+          })
+        )
+      );
+
+      // Notify relevant users if the test is scheduled
+      if (mockTest.scheduledFor) {
+        const students = await db
+          .select()
+          .from(users)
+          .where(eq(users.role, "student"));
+
+        await Promise.all(
+          students.map((student) =>
+            db.insert(notifications).values({
+              userId: student.id,
+              title: `New Mock Test Available: ${mockTest.title}`,
+              content: `A new mock test has been scheduled for ${mockTest.scheduledFor}`,
+              type: "event",
+            })
+          )
+        );
+      }
+
+      res.json(mockTest);
+    } catch (error: any) {
+      console.error("Error generating mock test:", error);
+      res.status(500).send(error.message);
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;
