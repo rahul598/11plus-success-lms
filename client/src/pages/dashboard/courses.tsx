@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { BulkOperationsDialog } from "@/components/bulk-operations/bulk-operations-dialog";
 
 export default function Courses() {
   const { data: courses = [] } = useQuery<SelectCourse[]>({
@@ -23,6 +24,7 @@ export default function Courses() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Courses</h1>
+        <BulkOperationsDialog entityType="courses" entityName="Courses" />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

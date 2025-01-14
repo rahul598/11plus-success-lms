@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { BulkOperationsDialog } from "@/components/bulk-operations/bulk-operations-dialog";
 
 export default function Users() {
   const [search, setSearch] = useState("");
@@ -37,6 +38,7 @@ export default function Users() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Users</h1>
+        <BulkOperationsDialog entityType="users" entityName="Users" />
       </div>
 
       <div className="flex gap-4">

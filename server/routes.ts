@@ -4,6 +4,13 @@ import { setupAuth } from "./auth";
 import { db } from "@db";
 import { users, questions, courses, tutors, payments, studentProgress } from "@db/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
+import multer from "multer";
+import { parse } from "csv-parse";
+import { stringify } from "csv-stringify";
+import { Readable } from "stream";
+
+// Configure multer for file uploads
+const upload = multer({ storage: multer.memoryStorage() });
 
 function requireAuth(req: Request, res: Response, next: Function) {
   if (req.isAuthenticated()) {
@@ -238,6 +245,155 @@ export function registerRoutes(app: Express): Server {
       revenueAnalytics,
       userEngagement,
     });
+  });
+
+  // Bulk Export Routes
+  app.get("/api/users/export", requireAdmin, async (_req, res) => {
+    try {
+      const allUsers = await db.select().from(users);
+
+      const stringifier = stringify({
+        header: true,
+        columns: ["username", "email", "role", "createdAt"]
+      });
+
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", "attachment; filename=users.csv");
+
+      stringifier.pipe(res);
+      allUsers.forEach(user => {
+        stringifier.write({
+          username: user.username,
+          email: user.email,
+          role: user.role,
+          createdAt: user.createdAt
+        });
+      });
+      stringifier.end();
+    } catch (error: any) {
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.get("/api/courses/export", requireAdmin, async (_req, res) => {
+    try {
+      const allCourses = await db.select().from(courses);
+
+      const stringifier = stringify({
+        header: true,
+        columns: ["title", "description", "price", "published", "createdAt"]
+      });
+
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", "attachment; filename=courses.csv");
+
+      stringifier.pipe(res);
+      allCourses.forEach(course => {
+        stringifier.write({
+          title: course.title,
+          description: course.description,
+          price: course.price,
+          published: course.published,
+          createdAt: course.createdAt
+        });
+      });
+      stringifier.end();
+    } catch (error: any) {
+      res.status(500).send(error.message);
+    }
+  });
+
+  // Bulk Import Routes
+  app.post("/api/users/import", requireAdmin, upload.single("file"), async (req, res) => {
+    if (!req.file) {
+      return res.status(400).send("No file uploaded");
+    }
+
+    try {
+      const records: any[] = [];
+      const parser = parse({
+        columns: true,
+        skip_empty_lines: true
+      });
+
+      parser.on("readable", function() {
+        let record;
+        while ((record = parser.read()) !== null) {
+          records.push(record);
+        }
+      });
+
+      parser.on("error", function(err) {
+        throw err;
+      });
+
+      parser.write(req.file.buffer.toString());
+      parser.end();
+
+      // Wait for parsing to complete
+      await new Promise((resolve) => parser.on("end", resolve));
+
+      // Validate and prepare records
+      const validRecords = records.map(record => ({
+        username: record.username,
+        email: record.email,
+        role: record.role || "student",
+        password: "changeme123" // Default password that users must change
+      }));
+
+      // Insert records
+      const result = await db.insert(users).values(validRecords).returning();
+
+      res.json({ imported: result.length });
+    } catch (error: any) {
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.post("/api/courses/import", requireAdmin, upload.single("file"), async (req, res) => {
+    if (!req.file) {
+      return res.status(400).send("No file uploaded");
+    }
+
+    try {
+      const records: any[] = [];
+      const parser = parse({
+        columns: true,
+        skip_empty_lines: true
+      });
+
+      parser.on("readable", function() {
+        let record;
+        while ((record = parser.read()) !== null) {
+          records.push(record);
+        }
+      });
+
+      parser.on("error", function(err) {
+        throw err;
+      });
+
+      parser.write(req.file.buffer.toString());
+      parser.end();
+
+      // Wait for parsing to complete
+      await new Promise((resolve) => parser.on("end", resolve));
+
+      // Validate and prepare records
+      const validRecords = records.map(record => ({
+        title: record.title,
+        description: record.description,
+        price: parseFloat(record.price) || 0,
+        published: record.published === "true"
+      }));
+
+      // Insert records
+      const result = await db.insert(courses).values(validRecords).returning();
+
+      res.json({ imported: result.length });
+    } catch (error: any) {
+      res.status(500).send(error.message);
+    }
   });
 
   const httpServer = createServer(app);
