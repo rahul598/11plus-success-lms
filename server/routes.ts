@@ -2,16 +2,32 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { db } from "@db";
-import { 
-  users, questions, courses, tutors, payments, studentProgress,
-  mockTests, mockTestQuestions, mockTestSessions, mockTestAnswers,
-  events, eventParticipants, notifications, media, studentAchievements, 
-  studentEngagement, rewards, studentRewards, subscriptionPlans, userSubscriptions
+import {
+  users,
+  questions,
+  courses,
+  tutors,
+  payments,
+  studentProgress,
+  mockTests,
+  mockTestQuestions,
+  mockTestSessions,
+  mockTestAnswers,
+  events,
+  eventParticipants,
+  notifications,
+  media,
+  studentAchievements,
+  studentEngagement,
+  rewards,
+  studentRewards,
+  subscriptionPlans,
+  userSubscriptions,
 } from "@db/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
 import multer from "multer";
 import { stringify } from "csv-stringify";
-import { parse } from 'csv-parse';
+import { parse } from "csv-parse";
 
 // Configure multer for file uploads
 const upload = multer({ storage: multer.memoryStorage() });
@@ -20,7 +36,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 declare global {
   namespace Express {
     interface Request {
-      file?: Express.Multer.File
+      file?: Express.Multer.File;
     }
   }
 }
@@ -66,7 +82,7 @@ export function registerRoutes(app: Express): Server {
     res.json(allUsers);
   });
 
-  // Questions 
+  // Questions
   app.get("/api/questions", requireAuth, async (_req, res) => {
     try {
       const allQuestions = await db
@@ -141,7 +157,7 @@ export function registerRoutes(app: Express): Server {
           totalQuestions: req.body.totalQuestions,
           rules: req.body.rules || {},
           createdBy: req.user.id,
-          scheduledFor: req.body.scheduledFor ? new Date(req.body.scheduledFor) : null
+          scheduledFor: req.body.scheduledFor ? new Date(req.body.scheduledFor) : null,
         })
         .returning();
 
@@ -270,19 +286,19 @@ export function registerRoutes(app: Express): Server {
       const allUsers = await db.select().from(users);
       const stringifier = stringify({
         header: true,
-        columns: ["username", "email", "role", "createdAt"]
+        columns: ["username", "email", "role", "createdAt"],
       });
 
       res.setHeader("Content-Type", "text/csv");
       res.setHeader("Content-Disposition", "attachment; filename=users.csv");
 
       stringifier.pipe(res);
-      allUsers.forEach(user => {
+      allUsers.forEach((user) => {
         stringifier.write({
           username: user.username,
           email: user.email,
           role: user.role,
-          createdAt: user.createdAt
+          createdAt: user.createdAt,
         });
       });
       stringifier.end();
@@ -300,7 +316,7 @@ export function registerRoutes(app: Express): Server {
       const records: any[] = [];
       const parser = parse({
         columns: true,
-        skip_empty_lines: true
+        skip_empty_lines: true,
       });
 
       parser.on("readable", function () {
@@ -319,11 +335,11 @@ export function registerRoutes(app: Express): Server {
 
       await new Promise((resolve) => parser.on("end", resolve));
 
-      const validRecords = records.map(record => ({
+      const validRecords = records.map((record) => ({
         username: record.username,
         email: record.email,
         role: record.role || "student",
-        password: "changeme123" // Default password that users must change
+        password: "changeme123", // Default password that users must change
       }));
 
       const result = await db.insert(users).values(validRecords).returning();
@@ -336,72 +352,72 @@ export function registerRoutes(app: Express): Server {
 
   app.get("/api/courses/export", requireAdmin, async (_req, res) => {
     try {
-        const allCourses = await db.select().from(courses);
+      const allCourses = await db.select().from(courses);
 
-        const stringifier = stringify({
-            header: true,
-            columns: ["title", "description", "price", "published", "createdAt"]
+      const stringifier = stringify({
+        header: true,
+        columns: ["title", "description", "price", "published", "createdAt"],
+      });
+
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", "attachment; filename=courses.csv");
+
+      stringifier.pipe(res);
+      allCourses.forEach((course) => {
+        stringifier.write({
+          title: course.title,
+          description: course.description,
+          price: course.price,
+          published: course.published,
+          createdAt: course.createdAt,
         });
-
-        res.setHeader("Content-Type", "text/csv");
-        res.setHeader("Content-Disposition", "attachment; filename=courses.csv");
-
-        stringifier.pipe(res);
-        allCourses.forEach(course => {
-            stringifier.write({
-                title: course.title,
-                description: course.description,
-                price: course.price,
-                published: course.published,
-                createdAt: course.createdAt
-            });
-        });
-        stringifier.end();
+      });
+      stringifier.end();
     } catch (error: any) {
-        res.status(500).send(error.message);
+      res.status(500).send(error.message);
     }
   });
 
   app.post("/api/courses/import", requireAdmin, upload.single("file"), async (req, res) => {
     if (!req.file) {
-        return res.status(400).send("No file uploaded");
+      return res.status(400).send("No file uploaded");
     }
 
     try {
-        const records: any[] = [];
-        const parser = parse({
-            columns: true,
-            skip_empty_lines: true
-        });
+      const records: any[] = [];
+      const parser = parse({
+        columns: true,
+        skip_empty_lines: true,
+      });
 
-        parser.on("readable", function () {
-            let record;
-            while ((record = parser.read()) !== null) {
-                records.push(record);
-            }
-        });
+      parser.on("readable", function () {
+        let record;
+        while ((record = parser.read()) !== null) {
+          records.push(record);
+        }
+      });
 
-        parser.on("error", function (err) {
-            throw err;
-        });
+      parser.on("error", function (err) {
+        throw err;
+      });
 
-        parser.write(req.file.buffer.toString());
-        parser.end();
+      parser.write(req.file.buffer.toString());
+      parser.end();
 
-        await new Promise((resolve) => parser.on("end", resolve));
+      await new Promise((resolve) => parser.on("end", resolve));
 
-        const validRecords = records.map(record => ({
-            title: record.title,
-            description: record.description,
-            price: parseFloat(record.price) || 0,
-            published: record.published === "true"
-        }));
+      const validRecords = records.map((record) => ({
+        title: record.title,
+        description: record.description,
+        price: parseFloat(record.price) || 0,
+        published: record.published === "true",
+      }));
 
-        const result = await db.insert(courses).values(validRecords).returning();
+      const result = await db.insert(courses).values(validRecords).returning();
 
-        res.json({ imported: result.length });
+      res.json({ imported: result.length });
     } catch (error: any) {
-        res.status(500).send(error.message);
+      res.status(500).send(error.message);
     }
   });
 
@@ -450,10 +466,12 @@ export function registerRoutes(app: Express): Server {
       const [activeCourses] = await db
         .select({ count: sql<number>`count(*)` })
         .from(courses)
-        .where(and(
-          eq(courses.createdBy, req.user.id),
-          eq(courses.published, true)
-        ));
+        .where(
+          and(
+            eq(courses.createdBy, req.user.id),
+            eq(courses.published, true)
+          )
+        );
 
       const [mockTestsCount] = await db
         .select({ count: sql<number>`count(*)` })
@@ -462,7 +480,7 @@ export function registerRoutes(app: Express): Server {
 
       const [{ averageRating }] = await db
         .select({
-          averageRating: sql<number>`avg(rating)::numeric(10,2)`
+          averageRating: sql<number>`avg(rating)::numeric(10,2)`,
         })
         .from(tutors)
         .where(eq(tutors.userId, req.user.id));
@@ -488,18 +506,22 @@ export function registerRoutes(app: Express): Server {
       const [completedCourses] = await db
         .select({ count: sql<number>`count(*)` })
         .from(studentProgress)
-        .where(and(
-          eq(studentProgress.userId, req.user.id),
-          eq(studentProgress.progress, 100)
-        ));
+        .where(
+          and(
+            eq(studentProgress.userId, req.user.id),
+            eq(studentProgress.progress, 100)
+          )
+        );
 
       const [activeTests] = await db
         .select({ count: sql<number>`count(*)` })
         .from(mockTestSessions)
-        .where(and(
-          eq(mockTestSessions.userId, req.user.id),
-          eq(mockTestSessions.status, "in_progress")
-        ));
+        .where(
+          and(
+            eq(mockTestSessions.userId, req.user.id),
+            eq(mockTestSessions.status, "in_progress")
+          )
+        );
 
       const [achievements] = await db
         .select({ count: sql<number>`count(*)` })
@@ -508,13 +530,15 @@ export function registerRoutes(app: Express): Server {
 
       const [{ averageScore }] = await db
         .select({
-          averageScore: sql<number>`avg(score)::numeric(10,2)`
+          averageScore: sql<number>`avg(score)::numeric(10,2)`,
         })
         .from(mockTestSessions)
-        .where(and(
-          eq(mockTestSessions.userId, req.user.id),
-          eq(mockTestSessions.status, "completed")
-        ));
+        .where(
+          and(
+            eq(mockTestSessions.userId, req.user.id),
+            eq(mockTestSessions.status, "completed")
+          )
+        );
 
       res.json({
         completedCourses: completedCourses.count || 0,
@@ -767,14 +791,14 @@ export function registerRoutes(app: Express): Server {
     try {
       const [{ total }] = await db
         .select({
-          total: sql<number>`count(*)`
+          total: sql<number>`count(*)`,
         })
         .from(questions);
 
       const categoryCounts = await db
         .select({
           category: questions.category,
-          total: sql<number>`count(*)`
+          total: sql<number>`count(*)`,
         })
         .from(questions)
         .groupBy(questions.category);
@@ -782,13 +806,13 @@ export function registerRoutes(app: Express): Server {
       const byCategory = Object.fromEntries(
         categoryCounts.map(({ category, total }) => [
           category,
-          { total }
+          { total },
         ])
       );
 
       res.json({
         total,
-        byCategory
+        byCategory,
       });
     } catch (error: any) {
       console.error("Error fetching question statistics:", error);
@@ -797,292 +821,288 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Event Management Routes
-    app.get("/api/events", requireAuth, async (_req, res) => {
-        try {
-            const allEvents = await db
-                .select()
-                .from(events)
-                .orderBy(desc(events.startTime));
-            res.json(allEvents);
-        } catch (error: any) {
-            console.error("Error fetching events:", error);
-            res.status(500).send(error.message);
-        }
-    });
+  app.get("/api/events", requireAuth, async (_req, res) => {
+    try {
+      const allEvents = await db
+        .select()
+        .from(events)
+        .orderBy(desc(events.startTime));
+      res.json(allEvents);
+    } catch (error: any) {
+      console.error("Error fetching events:", error);
+      res.status(500).send(error.message);
+    }
+  });
 
-    app.post("/api/events", requireAuth, async (req: Request & { user?: Express.User }, res) => {
-        if (!req.user) {
-            return res.status(401).send("Unauthorized");
-        }
-
-        try {
-            const [event] = await db
-                .insert(events)
-                .values({
-                    ...req.body,
-                    createdBy: req.user.id,
-                })
-                .returning();
-
-            await db.insert(eventParticipants).values({
-                eventId: event.id,
-                userId: req.user.id,
-                role: "organizer",
-            });
-
-            if (event.type === "exam") {
-                const students = await db
-                    .select()
-                    .from(users)
-                    .where(eq(users.role, "student"));
-
-                await Promise.all(
-                    students.map((student) =>
-                        db.insert(notifications).values({
-                            userId: student.id,
-                            title: `New Exam Scheduled: ${event.title}`,
-                            content: `A new exam has been scheduled for ${new Date(event.startTime).toLocaleDateString()}`,
-                            type: "event",
-                        })
-                    )
-                );
-            }
-
-            res.json(event);
-        } catch (error: any) {
-            console.error("Error creating event:", error);
-            res.status(500).send(error.message);
-        }
-    });
-
-    app.post("/api/events/:id/register", requireAuth, async (req: Request & { user?: Express.User }, res) => {
-        if (!req.user) {
-            return res.status(401).send("Unauthorized");
-        }
-
-        try {
-            const eventId = parseInt(req.params.id);
-            const [event] = await db
-                .select()
-                .from(events)
-                .where(eq(events.id, eventId))
-                .limit(1);
-
-            if (!event) {
-                return res.status(404).send("Event not found");
-            }
-
-            if (event.capacity && event.enrolledCount >= event.capacity) {
-                return res.status(400).send("Event is full");
-            }
-
-            const [registration] = await db
-                .insert(eventParticipants)
-                .values({
-                    eventId,
-                    userId: req.user.id,
-                    role: "attendee",
-                })
-                .returning();
-
-            await db
-                .update(events)
-                .set({
-                    enrolledCount: sql`${events.enrolledCount} + 1`,
-                })
-                .where(eq(events.id, eventId));
-
-            res.json(registration);
-        } catch (error: any) {
-            console.error("Error registering for event:", error);
-            res.status(500).send(error.message);
-        }
-    });
-
-    // Automated Result Processing Routes
-    app.post("/api/mock-tests/:sessionId/process-results", requireAuth, async (req: Request & { user?: Express.User }, res) => {
-        if (!req.user) {
-            return res.status(401).send("Unauthorized");
-        }
-
-        try {
-            const sessionId = parseInt(req.params.sessionId);
-            const [session] = await db
-                .select()
-                .from(mockTestSessions)
-                .where(eq(mockTestSessions.id, sessionId))
-                .limit(1);
-
-            if (!session) {
-                return res.status(404).send("Session not found");
-            }
-
-            const answers = await db
-                .select({
-                    answer: mockTestAnswers,
-                    question: {
-                        id: questions.id,
-                        content: questions.content,
-                        correctAnswer: questions.correctAnswer,
-                        explanation: questions.explanation,
-                    },
-                })
-                .from(mockTestAnswers)
-                .innerJoin(questions, eq(questions.id, mockTestAnswers.questionId))
-                .where(eq(mockTestAnswers.sessionId, sessionId));
-
-            let totalScore = 0;
-            const processedAnswers = await Promise.all(
-                answers.map(async ({ answer, question }) => {
-                    const isCorrect = answer.selectedOption === question.correctAnswer;
-                    if (isCorrect) totalScore++;
-
-                    const feedback = isCorrect
-                        ? "Correct! " + (question.explanation || "")
-                        : `Incorrect. The correct answer was option ${question.correctAnswer}. ${
-                            question.explanation || ""
-                        }`;
-
-                    const [updatedAnswer] = await db
-                        .update(mockTestAnswers)
-                        .set({
-                            isCorrect,
-                            feedback,
-                            confidenceLevel: calculateConfidenceLevel(answer.timeSpent),
-                            mistakeCategory: !isCorrect
-                                ? categorizeMistake(answer.selectedOption, question.correctAnswer)
-                                : null,
-                        })
-                        .where(eq(mockTestAnswers.id, answer.id))
-                        .returning();
-
-                    return updatedAnswer;
-                })
-            );
-
-            const [updatedSession] = await db
-                .update(mockTestSessions)
-                .set({
-                    score: totalScore,
-                    status: "completed",
-                    endTime: new Date(),
-                })
-                .where(eq(mockTestSessions.id, sessionId))
-                .returning();
-
-            await db.insert(notifications).values({
-                userId: session.userId,
-                title: "Mock Test Results Available",
-                content: `Your mock test results are ready. Score: ${totalScore}/${answers.length}`,
-                type: "result",
-            });
-
-            res.json({
-                session: updatedSession,
-                answers: processedAnswers,
-            });
-        } catch (error: any) {
-            console.error("Error processing results:", error);
-            res.status(500).send(error.message);
-        }
-    });
-
-    // Notification Routes
-    app.get("/api/notifications", requireAuth, async (req: Request & { user?: Express.User }, res) => {
-        if (!req.user) {
-            return res.status(401).send("Unauthorized");
-        }
-
-        try {
-            const userNotifications = await db
-                .select()
-                .from(notifications)
-                .where(eq(notifications.userId, req.user.id))
-                .orderBy(desc(notifications.createdAt));
-
-            res.json(userNotifications);
-        } catch (error: any) {
-            console.error("Error fetching notifications:", error);
-            res.status(500).send(error.message);
-        }
-    });
-
-    app.post("/api/notifications/:id/mark-read", requireAuth, async (req: Request & { user?: Express.User }, res) => {
-        if (!req.user) {
-            return res.status(401).send("Unauthorized");
-        }
-
-        try {
-            const [notification] = await db
-                .update(notifications)
-                .set({
-                    status: "read",
-                    readAt: new Date(),
-                })
-                .where(
-                    and(
-                        eq(notifications.id, parseInt(req.params.id)),
-                        eq(notifications.userId, req.user.id)
-                    )
-                )
-                .returning();
-
-            res.json(notification);
-        } catch (error: any) {
-            console.error("Error marking notification as read:", error);
-            res.status(500).send(error.message);
-        }
-    });
-
-    // Helper functions for result processing
-    function calculateConfidenceLevel(timeSpent: number): number {
-        if (timeSpent < 30) return 5;
-        if (timeSpent < 60) return 4;
-        if (timeSpent < 120) return 3;
-        if (timeSpent < 180) return 2;
-        return 1;
+  app.post("/api/events", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
     }
 
-    function categorizeMistake(selected: number, correct: number): string {
-        if (Math.abs(selected - correct) === 1) {
-            return "near_miss";
-        }
-        return "conceptual_error";
+    try {
+      const [event] = await db
+        .insert(events)
+        .values({
+          ...req.body,
+          createdBy: req.user.id,
+        })
+        .returning();
+
+      await db.insert(eventParticipants).values({
+        eventId: event.id,
+        userId: req.user.id,
+        role: "organizer",
+      });
+
+      if (event.type === "exam") {
+        const students = await db
+          .select()
+          .from(users)
+          .where(eq(users.role, "student"));
+
+        await Promise.all(
+          students.map((student) =>
+            db.insert(notifications).values({
+              userId: student.id,
+              title: `New Exam Scheduled: ${event.title}`,
+              content: `A new exam has been scheduled for ${new Date(event.startTime).toLocaleDateString()}`,
+              type: "event",
+            })
+          )
+        );
+      }
+
+      res.json(event);
+    } catch (error: any) {
+      console.error("Error creating event:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.post("/api/events/:id/register", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
     }
 
-    // Get question statistics
-    app.get("/api/questions/stats", requireAuth, async (_req, res) => {
-        try {
-            const [{ total }] = await db
-                .select({
-                    total: sql<number>`count(*)`
-                })
-                .from(questions);
+    try {
+      const eventId = parseInt(req.params.id);
+      const [event] = await db
+        .select()
+        .from(events)
+        .where(eq(events.id, eventId))
+        .limit(1);
 
-            const categoryCounts = await db
-                .select({
-                    category: questions.category,
-                    total: sql<number>`count(*)`
-                })
-                .from(questions)
-                .groupBy(questions.category);
+      if (!event) {
+        return res.status(404).send("Event not found");
+      }
 
-            const byCategory = Object.fromEntries(
-                categoryCounts.map(({ category, total }) => [
-                    category,
-                    { total }
-                ])
-            );
+      if (event.capacity && event.enrolledCount >= event.capacity) {
+        return res.status(400).send("Event is full");
+      }
 
-            res.json({
-                total,
-                byCategory
-            });
-        } catch (error: any) {
-            console.error("Error fetching question statistics:", error);
-            res.status(500).send(error.message);
-        }
-    });
+      const [registration] = await db
+        .insert(eventParticipants)
+        .values({
+          eventId,
+          userId: req.user.id,
+          role: "attendee",
+        })
+        .returning();
+
+      await db
+        .update(events)
+        .set({
+          enrolledCount: sql`${events.enrolledCount} + 1`,
+        })
+        .where(eq(events.id, eventId));
+
+      res.json(registration);
+    } catch (error: any) {
+      console.error("Error registering for event:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  // Automated Result Processing Routes
+  app.post("/api/mock-tests/:sessionId/process-results", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      const [session] = await db
+        .select()
+        .from(mockTestSessions)
+        .where(eq(mockTestSessions.id, sessionId))
+        .limit(1);
+
+      if (!session) {
+        return res.status(404).send("Session not found");
+      }
+
+      const answers = await db
+        .select({
+          answer: mockTestAnswers,
+          question: {
+            id: questions.id,
+            content: questions.content,
+            correctAnswer: questions.correctAnswer,
+            explanation: questions.explanation,
+          },
+        })
+        .from(mockTestAnswers)
+        .innerJoin(questions, eq(questions.id, mockTestAnswers.questionId))
+        .where(eq(mockTestAnswers.sessionId, sessionId));
+
+      let totalScore = 0;
+      const processedAnswers = await Promise.all(
+        answers.map(async ({ answer, question }) => {
+          const isCorrect = answer.selectedOption === question.correctAnswer;
+          if (isCorrect) totalScore++;
+
+          const feedback = isCorrect
+            ? "Correct! " + (question.explanation || "")
+            : `Incorrect. The correct answer was option ${question.correctAnswer}. ${question.explanation || ""}`;
+
+          const [updatedAnswer] = await db
+            .update(mockTestAnswers)
+            .set({
+              isCorrect,
+              feedback,
+              confidenceLevel: calculateConfidenceLevel(answer.timeSpent),
+              mistakeCategory: !isCorrect ? categorizeMistake(answer.selectedOption, question.correctAnswer) : null,
+            })
+            .where(eq(mockTestAnswers.id, answer.id))
+            .returning();
+
+          return updatedAnswer;
+        })
+      );
+
+      const [updatedSession] = await db
+        .update(mockTestSessions)
+        .set({
+          score: totalScore,
+          status: "completed",
+          endTime: new Date(),
+        })
+        .where(eq(mockTestSessions.id, sessionId))
+        .returning();
+
+      await db.insert(notifications).values({
+          userId: session.userId,
+          title: "Mock Test Results Available",
+          content: `Your mock test results are ready. Score: ${totalScore}/${answers.length}`,
+          type: "result",
+        });
+
+      res.json({
+        session: updatedSession,
+        answers: processedAnswers,
+      });
+    } catch (error: any) {
+      console.error("Error processing results:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  // Notification Routes
+  app.get("/api/notifications", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+
+    try {
+      const userNotifications = await db
+        .select()
+        .from(notifications)
+        .where(eq(notifications.userId, req.user.id))
+        .orderBy(desc(notifications.createdAt));
+
+      res.json(userNotifications);
+    } catch (error: any) {
+      console.error("Error fetching notifications:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.post("/api/notifications/:id/mark-read", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+
+    try {
+      const [notification] = await db
+        .update(notifications)
+        .set({
+          status: "read",
+          readAt: new Date(),
+        })
+        .where(
+          and(
+            eq(notifications.id, parseInt(req.params.id)),
+            eq(notifications.userId, req.user.id)
+          )
+        )
+        .returning();
+
+      res.json(notification);
+    } catch (error: any) {
+      console.error("Error marking notification as read:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  // Helper functions for result processing
+  function calculateConfidenceLevel(timeSpent: number): number {
+    if (timeSpent < 30) return 5;
+    if (timeSpent < 60) return 4;
+    if (timeSpent < 120) return 3;
+    if (timeSpent < 180) return 2;
+    return 1;
+  }
+
+  function categorizeMistake(selected: number, correct: number): string {
+    if (Math.abs(selected - correct) === 1) {
+      return "near_miss";
+    }
+    return "conceptual_error";
+  }
+
+  // Get question statistics
+  app.get("/api/questions/stats", requireAuth, async (_req, res) => {
+    try {
+      const [{ total }] = await db
+        .select({
+          total: sql<number>`count(*)`,
+        })
+        .from(questions);
+
+      const categoryCounts = await db
+        .select({
+          category: questions.category,
+          total: sql<number>`count(*)`,
+        })
+        .from(questions)
+        .groupBy(questions.category);
+
+      const byCategory = Object.fromEntries(
+        categoryCounts.map(({ category, total }) => [
+          category,
+          { total },
+        ])
+      );
+
+      res.json({
+        total,
+        byCategory,
+      });
+    } catch (error: any) {
+      console.error("Error fetching question statistics:", error);
+      res.status(500).send(error.message);
+    }
+  });
 
   // Subscription Plan Routes
   app.get("/api/subscription-plans", async (_req, res) => {
@@ -1125,8 +1145,8 @@ export function registerRoutes(app: Express): Server {
           plan: {
             id: subscriptionPlans.id,
             name: subscriptionPlans.name,
-            features: subscriptionPlans.features
-          }
+            features: subscriptionPlans.features,
+          },
         })
         .from(userSubscriptions)
         .innerJoin(subscriptionPlans, eq(subscriptionPlans.id, userSubscriptions.planId))
@@ -1173,7 +1193,7 @@ export function registerRoutes(app: Express): Server {
           userId: req.user.id,
           amount: plan.price,
           status: "pending",
-          type: "subscription"
+          type: "subscription",
         })
         .returning();
 
@@ -1189,7 +1209,7 @@ export function registerRoutes(app: Express): Server {
           planId: plan.id,
           startDate,
           endDate,
-          paymentId: payment.id
+          paymentId: payment.id,
         })
         .returning();
 
@@ -1200,12 +1220,297 @@ export function registerRoutes(app: Express): Server {
           userId: req.user.id,
           title: "New Subscription Activated",
           content: `Your ${plan.name} subscription has been activated and is valid until ${endDate.toLocaleDateString()}`,
-          type: "system"
+          type: "system",
         });
 
       res.json({ subscription, payment });
     } catch (error: any) {
       console.error("Error purchasing subscription:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  // Analytics Routes
+  app.get("/api/analytics/overview", requireAdmin, async (_req, res) => {
+    try {
+      // User Growth Analysis
+      const [userGrowth] = await db
+        .select({
+          total: sql<number>`count(*)`,
+          newThisMonth: sql<number>`count(*) filter (where created_at >= date_trunc('month', now()))`,
+          activeThisMonth: sql<number>`count(*) filter (where last_login >= date_trunc('month', now()))`,
+        })
+        .from(users);
+
+      // Revenue Analytics
+      const [revenueMetrics] = await db
+        .select({
+          totalRevenue: sql<number>`sum(amount::numeric)`,
+          monthlyRevenue: sql<number>`sum(amount::numeric) filter (where created_at >= date_trunc('month', now()))`,
+        })
+        .from(payments)
+        .where(eq(payments.status, "completed"));
+
+      // Subscription Analytics
+      const [subscriptionMetrics] = await db
+        .select({
+          totalActive: sql<number>`count(*) filter (where status = 'active')`,
+          expiringThisMonth: sql<number>`count(*) filter (where status = 'active' and end_date <= date_trunc('month', now()) + interval '1 month')`,
+        })
+        .from(userSubscriptions);
+
+      // Engagement Metrics
+      const [engagementMetrics] = await db
+        .select({
+          avgLoginStreak: sql<number>`avg(login_streak)`,
+          avgTimeSpent: sql<number>`avg(total_time_spent)`,
+          avgParticipationScore: sql<number>`avg(participation_score)`,
+        })
+        .from(studentEngagement);
+
+      // Mock Test Analytics
+      const [mockTestMetrics] = await db
+        .select({
+          totalTests: sql<number>`count(*)`,
+          avgScore: sql<number>`avg(score) filter (where status = 'completed')`,
+          completionRate: sql<number>`count(*) filter (where status = 'completed')::float / count(*)::float`,
+        })
+        .from(mockTestSessions);
+
+      // Course Progress Analytics
+      const [courseMetrics] = await db
+        .select({
+          avgProgress: sql<number>`avg(progress)`,
+          completionRate: sql<number>`count(*) filter (where progress = 100)::float / count(*)::float`,
+        })
+        .from(studentProgress);
+
+      res.json({
+        users: {
+          total: userGrowth.total || 0,
+          newThisMonth: userGrowth.newThisMonth || 0,
+          activeThisMonth: userGrowth.activeThisMonth || 0,
+          growthRate: userGrowth.total ? (userGrowth.newThisMonth / userGrowth.total) * 100 : 0,
+        },
+        revenue: {
+          total: revenueMetrics?.totalRevenue || 0,
+          monthly: revenueMetrics?.monthlyRevenue || 0,
+        },
+        subscriptions: {
+          activeSubscriptions: subscriptionMetrics?.totalActive || 0,
+          expiringThisMonth: subscriptionMetrics?.expiringThisMonth || 0,
+        },
+        engagement: {
+          averageLoginStreak: Math.round(engagementMetrics?.avgLoginStreak || 0),
+          averageTimeSpentMinutes: Math.round((engagementMetrics?.avgTimeSpent || 0) / 60),
+          averageParticipationScore: Math.round(engagementMetrics?.avgParticipationScore || 0),
+        },
+        mockTests: {
+          total: mockTestMetrics?.totalTests || 0,
+          averageScore: Math.round((mockTestMetrics?.avgScore || 0) * 10) / 10,
+          completionRate: Math.round((mockTestMetrics?.completionRate || 0) * 100),
+        },
+        courses: {
+          averageProgress: Math.round((courseMetrics?.avgProgress || 0) * 10) / 10,
+          completionRate: Math.round((courseMetrics?.completionRate || 0) * 100),
+        },
+      });
+    } catch (error: any) {
+      console.error("Error fetching analytics overview:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  // Detailed Analytics Routes
+  app.get("/api/analytics/user-growth", requireAdmin, async (req, res) => {
+    try {
+      const period = req.query.period as string || "month";
+      const intervalMap = {
+        week: "day",
+        month: "week",
+        year: "month",
+      };
+
+      const interval = intervalMap[period as keyof typeof intervalMap] || "month";
+
+      const userGrowth = await db
+        .select({
+          period: sql`date_trunc(${sql.raw(interval)}, created_at)`,
+          newUsers: sql<number>`count(*)`,
+        })
+        .from(users)
+        .groupBy(sql`date_trunc(${sql.raw(interval)}, created_at)`)
+        .orderBy(sql`date_trunc(${sql.raw(interval)}, created_at)`);
+
+      res.json(userGrowth);
+    } catch (error: any) {
+      console.error("Error fetching user growth analytics:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.get("/api/analytics/revenue", requireAdmin, async (req, res) => {
+    try {
+      const period = req.query.period as string || "month";
+      const intervalMap = {
+        week: "day",
+        month: "week",
+        year: "month",
+      };
+
+      const interval = intervalMap[period as keyof typeof intervalMap] || "month";
+
+      const revenueData = await db
+        .select({
+          period: sql`date_trunc(${sql.raw(interval)}, created_at)`,
+          revenue: sql<number>`sum(amount::numeric)`,
+          transactions: sql<number>`count(*)`,
+        })
+        .from(payments)
+        .where(eq(payments.status, "completed"))
+        .groupBy(sql`date_trunc(${sql.raw(interval)}, created_at)`)
+        .orderBy(sql`date_trunc(${sql.raw(interval)}, created_at)`);
+
+      res.json(revenueData);
+    } catch (error: any) {
+      console.error("Error fetching revenue analytics:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.get("/api/analytics/mock-tests", requireAdmin, async (req, res) => {
+    try {
+      const [categoryPerformance] = await db
+        .select({
+          categories: sql<Record<string, { avgScore: number; totalAttempts: number }>>`
+            jsonb_object_agg(
+              q.category,
+              jsonb_build_object(
+                'avgScore', avg(case when mta.is_correct then 1 else 0 end),
+                'totalAttempts', count(*)
+              )
+            )
+          `,
+        })
+        .from(mockTestAnswers)
+        .innerJoin(questions, eq(questions.id, mockTestAnswers.questionId))
+        .groupBy(questions.category);
+
+      const difficultyAnalysis = await db
+        .select({
+          difficulty: questions.difficulty,
+          correctRate: sql<number>`avg(case when mta.is_correct then 1 else 0 end)`,
+          avgTimeSpent: sql<number>`avg(mta.time_spent)`,
+        })
+        .from(mockTestAnswers)
+        .innerJoin(questions, eq(questions.id, mockTestAnswers.questionId))
+        .groupBy(questions.difficulty);
+
+      const timeDistribution = await db
+        .select({
+          timeRange: sql<string>`
+            case 
+              when time_spent < 30 then 'Under 30s'
+              when time_spent < 60 then '30-60s'
+              when time_spent < 120 then '1-2m'
+              else 'Over 2m'
+            end
+          `,
+          count: sql<number>`count(*)`,
+          correctRate: sql<number>`avg(case when is_correct then 1 else 0 end)`,
+        })
+        .from(mockTestAnswers)
+        .groupBy(sql`
+          case 
+            when time_spent < 30 then 'Under 30s'
+            when time_spent < 60 then '30-60s'
+            when time_spent < 120 then '1-2m'
+            else 'Over 2m'
+          end
+        `);
+
+      res.json({
+        categoryPerformance: categoryPerformance?.categories || {},
+        difficultyAnalysis,
+        timeDistribution,
+      });
+    } catch (error: any) {
+      console.error("Error fetching mock test analytics:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  // Student Analytics
+  app.get("/api/analytics/student/:id", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user || (req.user.role !== "admin" && req.user.id !== parseInt(req.params.id))) {
+      return res.status(403).send("Forbidden");
+    }
+
+    try {
+      const studentId = parseInt(req.params.id);
+
+      // Performance Overview
+      const [performance] = await db
+        .select({
+          totalTests: sql<number>`count(*)`,
+          avgScore: sql<number>`avg(score)`,
+          testsCompleted: sql<number>`count(*) filter (where status = 'completed')`,
+        })
+        .from(mockTestSessions)
+        .where(eq(mockTestSessions.userId, studentId));
+
+      // Progress Tracking
+      const courseProgress = await db
+        .select({
+          courseId: courses.id,
+          courseName: courses.title,
+          progress: studentProgress.progress,
+          lastUpdated: studentProgress.lastUpdated,
+        })
+        .from(studentProgress)
+        .innerJoin(courses, eq(courses.id, studentProgress.courseId))
+        .where(eq(studentProgress.userId, studentId));
+
+      // Engagement Metrics
+      const [engagement] = await db
+        .select()
+        .from(studentEngagement)
+        .where(eq(studentEngagement.userId, studentId));
+
+      // Strength and Weaknesses
+      const strengthWeakness = await db
+        .select({
+          category: questions.category,
+          totalQuestions: sql<number>`count(*)`,
+          correctAnswers: sql<number>`count(*) filter (where mta.is_correct)`,
+          avgTimeSpent: sql<number>`avg(mta.time_spent)`,
+        })
+        .from(mockTestAnswers)
+        .innerJoin(questions, eq(questions.id, mockTestAnswers.questionId))
+        .innerJoin(
+          mockTestSessions,
+          eq(mockTestSessions.id, mockTestAnswers.sessionId)
+        )
+        .where(eq(mockTestSessions.userId, studentId))
+        .groupBy(questions.category);
+
+      res.json({
+        performance: {
+          totalTests: performance?.totalTests || 0,
+          averageScore: Math.round((performance?.avgScore || 0) * 10) / 10,
+          completionRate: performance?.totalTests
+            ? (performance.testsCompleted / performance.totalTests) * 100
+            : 0,
+        },
+        courseProgress,
+        engagement: engagement || null,
+        strengthWeakness: strengthWeakness.map((sw) => ({
+          ...sw,
+          correctRate: sw.totalQuestions ? (sw.correctAnswers / sw.totalQuestions) * 100 : 0,
+        })),
+      });
+    } catch (error: any) {
+      console.error("Error fetching student analytics:", error);
       res.status(500).send(error.message);
     }
   });
@@ -1219,8 +1524,8 @@ async function checkSubscriptionAccess(userId: number, feature: keyof typeof sub
     .select({
       subscription: userSubscriptions,
       plan: {
-        features: subscriptionPlans.features
-      }
+        features: subscriptionPlans.features,
+      },
     })
     .from(userSubscriptions)
     .innerJoin(subscriptionPlans, eq(subscriptionPlans.id, userSubscriptions.planId))
