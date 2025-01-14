@@ -396,6 +396,169 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Analytics Export Routes
+  app.get("/api/analytics/export", requireAdmin, async (_req, res) => {
+    try {
+      const [userGrowth, courseMetrics, questionAnalytics, revenueAnalytics, userEngagement] = await Promise.all([
+        db.execute(sql`
+          SELECT 
+            DATE(created_at) as date,
+            COUNT(*) as count
+          FROM users
+          WHERE created_at >= NOW() - INTERVAL '30 days'
+          GROUP BY DATE(created_at)
+          ORDER BY date
+        `),
+        db.execute(sql`
+          WITH course_stats AS (
+            SELECT 
+              c.title as "courseName",
+              COUNT(DISTINCT sp.user_id) as "totalEnrollments",
+              AVG(sp.progress) as "averageProgress",
+              COUNT(CASE WHEN sp.progress = 100 THEN 1 END)::float / 
+                NULLIF(COUNT(sp.user_id), 0) * 100 as "completionRate",
+              COALESCE(SUM(CASE WHEN p.status = 'completed' THEN p.amount::numeric ELSE 0 END), 0) as revenue
+            FROM courses c
+            LEFT JOIN student_progress sp ON c.id = sp.course_id
+            LEFT JOIN payments p ON p.user_id = sp.user_id
+            GROUP BY c.title
+          )
+          SELECT * FROM course_stats
+          ORDER BY "totalEnrollments" DESC
+        `),
+        db.execute(sql`
+          WITH question_stats AS (
+            SELECT 
+              q.difficulty,
+              COUNT(*) as count,
+              AVG(sp.attempts) as "averageAttempts",
+              COUNT(CASE WHEN sp.completed THEN 1 END)::float / 
+                NULLIF(COUNT(*), 0) * 100 as "successRate"
+            FROM questions q
+            LEFT JOIN student_progress sp ON q.id = sp.question_id
+            GROUP BY q.difficulty
+          )
+          SELECT * FROM question_stats
+          ORDER BY difficulty
+        `),
+        db.execute(sql`
+          WITH monthly_revenue AS (
+            SELECT 
+              DATE_TRUNC('month', created_at) as period,
+              SUM(amount::numeric) as revenue,
+              COUNT(*) as "transactionCount"
+            FROM payments
+            WHERE status = 'completed'
+            AND created_at >= NOW() - INTERVAL '12 months'
+            GROUP BY period
+            ORDER BY period DESC
+          )
+          SELECT 
+            to_char(period, 'Month YYYY') as period,
+            revenue,
+            "transactionCount"
+          FROM monthly_revenue
+        `),
+        db.execute(sql`
+          WITH user_activity AS (
+            SELECT 
+              DATE_TRUNC('week', sp.last_activity) as period,
+              COUNT(DISTINCT sp.user_id) as "activeUsers",
+              AVG(sp.time_spent) as "averageTimeSpent"
+            FROM student_progress sp
+            WHERE sp.last_activity >= NOW() - INTERVAL '12 weeks'
+            GROUP BY period
+            ORDER BY period DESC
+          )
+          SELECT 
+            to_char(period, 'DD Mon YYYY') as period,
+            "activeUsers",
+            "averageTimeSpent"
+          FROM user_activity
+        `)
+      ]);
+
+      const report = {
+        userGrowth,
+        courseMetrics,
+        questionAnalytics,
+        revenueAnalytics,
+        userEngagement,
+        generatedAt: new Date().toISOString(),
+      };
+
+      if (req.query.format === 'csv') {
+        const stringifier = stringify({
+          header: true,
+          columns: [
+            'metric',
+            'category',
+            'value',
+            'date',
+          ]
+        });
+
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename=analytics_report.csv');
+
+        stringifier.pipe(res);
+
+        // Flatten the data for CSV export
+        userGrowth.forEach(row => {
+          stringifier.write({
+            metric: 'User Growth',
+            category: 'Daily Users',
+            value: row.count,
+            date: row.date,
+          });
+        });
+
+        courseMetrics.forEach(row => {
+          stringifier.write({
+            metric: 'Course Performance',
+            category: row.courseName,
+            value: row.completionRate,
+            date: new Date().toISOString().split('T')[0],
+          });
+        });
+
+        questionAnalytics.forEach(row => {
+          stringifier.write({
+            metric: 'Question Analytics',
+            category: row.difficulty,
+            value: row.successRate,
+            date: new Date().toISOString().split('T')[0],
+          });
+        });
+
+        revenueAnalytics.forEach(row => {
+          stringifier.write({
+            metric: 'Revenue Analytics',
+            category: row.period,
+            value: row.revenue,
+            date: new Date().toISOString().split('T')[0],
+          });
+        });
+
+        userEngagement.forEach(row => {
+          stringifier.write({
+            metric: 'User Engagement',
+            category: row.period,
+            value: row.activeUsers,
+            date: row.period,
+          });
+        });
+
+
+        stringifier.end();
+      } else {
+        res.json(report);
+      }
+    } catch (error: any) {
+      res.status(500).send(error.message);
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
