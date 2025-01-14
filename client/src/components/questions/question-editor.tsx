@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -78,6 +78,13 @@ export function QuestionEditor({ open, onClose }: QuestionEditorProps) {
       explanation: "",
     },
   });
+
+  // Reset form when dialog opens/closes
+  useEffect(() => {
+    if (!open) {
+      form.reset();
+    }
+  }, [open, form]);
 
   const mutation = useMutation({
     mutationFn: async (data: QuestionFormValues) => {
@@ -274,7 +281,7 @@ export function QuestionEditor({ open, onClose }: QuestionEditorProps) {
               name="correctAnswer"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Correct Answer Index</FormLabel>
+                  <FormLabel>Correct Answer</FormLabel>
                   <Select
                     onValueChange={(value) => field.onChange(parseInt(value))}
                     defaultValue={field.value.toString()}
