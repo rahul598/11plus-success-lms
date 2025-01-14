@@ -23,6 +23,7 @@ import {
   studentRewards,
   subscriptionPlans,
   userSubscriptions,
+  products, // Assuming this import is correct
 } from "@db/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
 import multer from "multer";
@@ -991,11 +992,11 @@ export function registerRoutes(app: Express): Server {
         .returning();
 
       await db.insert(notifications).values({
-          userId: session.userId,
-          title: "Mock Test Results Available",
-          content: `Your mock test results are ready. Score: ${totalScore}/${answers.length}`,
-          type: "result",
-        });
+        userId: session.userId,
+        title: "Mock Test Results Available",
+        content: `Your mock test results are ready. Score: ${totalScore}/${answers.length}`,
+        type: "result",
+      });
 
       res.json({
         session: updatedSession,
@@ -1512,6 +1513,77 @@ export function registerRoutes(app: Express): Server {
     } catch (error: any) {
       console.error("Error fetching student analytics:", error);
       res.status(500).send(error.message);
+    }
+  });
+
+  // Product Routes
+  app.post("/api/products", requireAdmin, upload.single("productFile"), async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    try {
+      // Check if we have all required data from the form
+      if (!req.body.title || !req.body.description || !req.body.price || !req.body.category) {
+        return res.status(400).json({
+          error: "Missing required fields",
+          required: ["title", "description", "price", "category"],
+          received: req.body
+        });
+      }
+
+      // Handle file upload
+      let fileUrl = '';
+      if (req.file) {
+        fileUrl = `/uploads/${req.file.originalname}`;
+      } else {
+        return res.status(400).json({ error: "Product file is required" });
+      }
+
+      // Create product in database
+      const [product] = await db
+        .insert(products)
+        .values({
+          title: req.body.title,
+          description: req.body.description,
+          price: parseFloat(req.body.price),
+          category: req.body.category,
+          fileUrl: fileUrl,
+          isActive: true,
+          createdBy: req.user.id,
+        })
+        .returning();
+
+      // Return success response
+      return res.status(200).json({
+        message: "Product created successfully",
+        product
+      });
+
+    } catch (error: any) {
+      console.error("Error creating product:", error);
+      // Ensure we always return JSON, even for errors
+      return res.status(500).json({
+        error: "Failed to create product",
+        details: error.message
+      });
+    }
+  });
+
+  // Get all products
+  app.get("/api/products", requireAuth, async (_req, res) => {
+    try {
+      const allProducts = await db
+        .select()
+        .from(products)
+        .orderBy(desc(products.createdAt));
+
+      return res.json(allProducts);
+    } catch (error: any) {
+      return res.status(500).json({
+        error: "Failed to fetch products",
+        details: error.message
+      });
     }
   });
 
