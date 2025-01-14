@@ -16,6 +16,7 @@ import Payments from "@/pages/dashboard/payments";
 import Tutors from "@/pages/dashboard/tutors";
 import Courses from "@/pages/dashboard/courses";
 import Settings from "@/pages/dashboard/settings";
+import MockTests from "@/pages/dashboard/mock-tests";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, isLoading } = useUser();
@@ -50,6 +51,7 @@ function Router() {
       <Route path="/dashboard/tutors" component={() => <ProtectedRoute component={Tutors} />} />
       <Route path="/dashboard/courses" component={() => <ProtectedRoute component={Courses} />} />
       <Route path="/dashboard/settings" component={() => <ProtectedRoute component={Settings} />} />
+      <Route path="/dashboard/mock-tests" component={() => <ProtectedRoute component={MockTests} />} />
       <Route path="/" component={() => <ProtectedRoute component={Dashboard} />} />
       <Route component={NotFound} />
     </Switch>
