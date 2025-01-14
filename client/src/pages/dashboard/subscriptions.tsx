@@ -34,15 +34,15 @@ interface SubscriptionPlan {
 export default function SubscriptionsPage() {
   const { toast } = useToast();
 
-  const { data: plans, isLoading, error } = useQuery<SubscriptionPlan[]>({
-    queryKey: ["subscription-plans"],
+  const { data: plans = [], isLoading, error } = useQuery<SubscriptionPlan[]>({
+    queryKey: ["/api/subscription-plans"],
     queryFn: async () => {
       const response = await fetch("/api/subscription-plans");
       if (!response.ok) {
         throw new Error(await response.text());
       }
       return response.json();
-    }
+    },
   });
 
   if (isLoading) {
@@ -55,6 +55,10 @@ export default function SubscriptionsPage() {
               Manage subscription plans and their features
             </p>
           </div>
+          <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Plan
+          </Button>
         </div>
         <div className="rounded-md border">
           <div className="p-8 text-center">
@@ -66,12 +70,6 @@ export default function SubscriptionsPage() {
   }
 
   if (error instanceof Error) {
-    toast({
-      variant: "destructive",
-      title: "Error loading subscription plans",
-      description: error.message
-    });
-
     return (
       <DashboardShell>
         <div className="flex justify-between items-center mb-6">
@@ -81,10 +79,14 @@ export default function SubscriptionsPage() {
               Manage subscription plans and their features
             </p>
           </div>
+          <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Plan
+          </Button>
         </div>
         <div className="rounded-md border">
           <div className="p-8 text-center text-red-500">
-            Failed to load subscription plans. Please try again later.
+            Error loading subscription plans: {error.message}
           </div>
         </div>
       </DashboardShell>
@@ -112,38 +114,46 @@ export default function SubscriptionsPage() {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Tier</TableHead>
-              <TableHead>Price</TableHead>
               <TableHead>Duration</TableHead>
+              <TableHead>Price</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="w-24">Actions</TableHead>
+              <TableHead className="w-[100px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {!plans?.length ? (
+            {plans.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center">
-                  No subscription plans found
+                  No subscription plans found. Click the Add Plan button to create one.
                 </TableCell>
               </TableRow>
             ) : (
               plans.map((plan) => (
                 <TableRow key={plan.id}>
-                  <TableCell>{plan.name}</TableCell>
+                  <TableCell className="font-medium">{plan.name}</TableCell>
                   <TableCell className="capitalize">{plan.tier}</TableCell>
-                  <TableCell>${plan.price}</TableCell>
                   <TableCell>{plan.duration} days</TableCell>
+                  <TableCell>${plan.price}</TableCell>
                   <TableCell>
-                    <span className={`capitalize ${plan.isActive ? 'text-green-600' : 'text-red-600'}`}>
-                      {plan.isActive ? 'Active' : 'Inactive'}
+                    <span
+                      className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
+                        plan.isActive
+                          ? "bg-green-100 text-green-700"
+                          : "bg-red-100 text-red-700"
+                      }`}
+                    >
+                      {plan.isActive ? "Active" : "Inactive"}
                     </span>
                   </TableCell>
-                  <TableCell className="flex gap-2">
-                    <Button variant="ghost" size="icon">
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon">
-                      <Archive className="h-4 w-4" />
-                    </Button>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Button variant="ghost" size="icon">
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon">
+                        <Archive className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))

@@ -19,6 +19,7 @@ import MockTests from "@/pages/dashboard/mock-tests";
 import Products from "@/pages/dashboard/products";
 import ProductCategories from "@/pages/dashboard/products/categories";
 import ProductOrders from "@/pages/dashboard/products/orders";
+import Subscriptions from "@/pages/dashboard/subscriptions";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, isLoading } = useUser();
@@ -56,6 +57,7 @@ function Router() {
       <Route path="/dashboard/products" component={() => <ProtectedRoute component={Products} />} />
       <Route path="/dashboard/products/categories" component={() => <ProtectedRoute component={ProductCategories} />} />
       <Route path="/dashboard/products/orders" component={() => <ProtectedRoute component={ProductOrders} />} />
+      <Route path="/dashboard/subscriptions" component={() => <ProtectedRoute component={Subscriptions} />} />
       <Route path="/" component={() => <ProtectedRoute component={Dashboard} />} />
       <Route component={NotFound} />
     </Switch>

@@ -1132,11 +1132,24 @@ export function registerRoutes(app: Express): Server {
   // Subscription Plan Routes
   app.get("/api/subscription-plans", requireAuth, async (_req, res) => {
     try {
-      const plans = await db
-        .select()
+      const allPlans = await db
+        .select({
+          id: subscriptionPlans.id,
+          name: subscriptionPlans.name,
+          description: subscriptionPlans.description,
+          tier: subscriptionPlans.tier,
+          duration: subscriptionPlans.duration,
+          price: subscriptionPlans.price,
+          features: subscriptionPlans.features,
+          maxMockTests: subscriptionPlans.maxMockTests,
+          isActive: subscriptionPlans.isActive,
+          createdAt: subscriptionPlans.createdAt,
+          updatedAt: subscriptionPlans.updatedAt,
+        })
         .from(subscriptionPlans)
-        .orderBy(desc(subscriptionPlans.createdAt));
-      res.json(plans);
+        .orderBy(subscriptionPlans.tier);
+
+      res.json(allPlans);
     } catch (error: any) {
       console.error("Error fetching subscription plans:", error);
       res.status(500).send(error.message);
@@ -1156,15 +1169,72 @@ export function registerRoutes(app: Express): Server {
           description: req.body.description,
           tier: req.body.tier,
           duration: req.body.duration,
-          price: new Decimal(req.body.price).toString(),
-          features: req.body.features || {},
-          isActive: true
+          price: req.body.price,
+          features: req.body.features,
+          maxMockTests: req.body.maxMockTests,
         })
         .returning();
 
       res.json(plan);
     } catch (error: any) {
       console.error("Error creating subscription plan:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.put("/api/subscription-plans/:id", requireAuth, requireAdmin, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+
+    try {
+      const planId = parseInt(req.params.id);
+      const [plan] = await db
+        .update(subscriptionPlans)
+        .set({
+          name: req.body.name,
+          description: req.body.description,
+          tier: req.body.tier,
+          duration: req.body.duration,
+          price: req.body.price,
+          features: req.body.features,
+          maxMockTests: req.body.maxMockTests,
+          isActive: req.body.isActive,
+          updatedAt: new Date(),
+        })
+        .where(eq(subscriptionPlans.id, planId))
+        .returning();
+
+      if (!plan) {
+        return res.status(404).send("Subscription plan not found");
+      }
+
+      res.json(plan);
+    } catch (error: any) {
+      console.error("Error updating subscription plan:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.delete("/api/subscription-plans/:id", requireAuth, requireAdmin, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+
+    try {
+      const planId = parseInt(req.params.id);
+      const [plan] = await db
+        .delete(subscriptionPlans)
+        .where(eq(subscriptionPlans.id, planId))
+        .returning();
+
+      if (!plan) {
+        return res.status(404).send("Subscription plan not found");
+      }
+
+      res.json({ message: "Subscription plan deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting subscription plan:", error);
       res.status(500).send(error.message);
     }
   });
