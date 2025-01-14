@@ -2,7 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { db } from "@db";
-import { users, questions, courses, tutors, payments, studentProgress, media, achievements, rewards, studentAchievements, studentRewards, studentEngagement } from "@db/schema";
+import { users, questions, courses, tutors, payments, studentProgress, media, achievements, rewards, studentAchievements, studentRewards, studentEngagement, mockTests, mockTestQuestions } from "@db/schema";
 import { eq, desc, and, sql, not, exists } from "drizzle-orm";
 import multer from "multer";
 
@@ -869,6 +869,141 @@ export function registerRoutes(app: Express): Server {
       }
     }
   }
+
+  // Mock Test Management Routes
+  app.get("/api/mock-tests", requireAuth, async (_req, res) => {
+    try {
+      const allTests = await db
+        .select()
+        .from(mockTests)
+        .orderBy(desc(mockTests.createdAt));
+      res.json(allTests);
+    } catch (error: any) {
+      console.error("Error fetching mock tests:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.post("/api/mock-tests", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+
+    try {
+      const {
+        title,
+        description,
+        type,
+        duration,
+        totalQuestions,
+        rules,
+        scheduledFor
+      } = req.body;
+
+      // Create the mock test
+      const [mockTest] = await db
+        .insert(mockTests)
+        .values({
+          title,
+          description,
+          type,
+          duration,
+          totalQuestions,
+          rules,
+          scheduledFor: scheduledFor ? new Date(scheduledFor) : null,
+          createdBy: req.user.id
+        })
+        .returning();
+
+      // If it's a subject-specific test, generate questions based on rules
+      if (type === "subject_specific") {
+        const subjectQuestions = await db
+          .select()
+          .from(questions)
+          .where(eq(questions.category, rules.subject))
+          .limit(totalQuestions);
+
+        // Add questions to the mock test
+        await Promise.all(
+          subjectQuestions.map((question, index) =>
+            db.insert(mockTestQuestions).values({
+              mockTestId: mockTest.id,
+              questionId: question.id,
+              orderNumber: index + 1,
+              marks: rules.marksPerQuestion || 1
+            })
+          )
+        );
+      } 
+      // For mixed tests, handle the distribution across subjects
+      else if (type === "mixed") {
+        for (const [subject, count] of Object.entries(rules.subjectDistribution)) {
+          const subjectQuestions = await db
+            .select()
+            .from(questions)
+            .where(eq(questions.category, subject))
+            .limit(count as number);
+
+          await Promise.all(
+            subjectQuestions.map((question, index) =>
+              db.insert(mockTestQuestions).values({
+                mockTestId: mockTest.id,
+                questionId: question.id,
+                orderNumber: index + 1,
+                marks: rules.marksPerQuestion || 1
+              })
+            )
+          );
+        }
+      }
+
+      res.json(mockTest);
+    } catch (error: any) {
+      console.error("Error creating mock test:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.get("/api/mock-tests/:id", requireAuth, async (req, res) => {
+    try {
+      const [mockTest] = await db
+        .select()
+        .from(mockTests)
+        .where(eq(mockTests.id, parseInt(req.params.id)))
+        .limit(1);
+
+      if (!mockTest) {
+        return res.status(404).send("Mock test not found");
+      }
+
+      const questions = await db
+        .select({
+          id: mockTestQuestions.id,
+          orderNumber: mockTestQuestions.orderNumber,
+          marks: mockTestQuestions.marks,
+          question: {
+            id: questions.id,
+            title: questions.title,
+            content: questions.content,
+            category: questions.category,
+            subCategory: questions.subCategory,
+            difficulty: questions.difficulty,
+            questionType: questions.questionType,
+            contentType: questions.contentType,
+            options: questions.options
+          }
+        })
+        .from(mockTestQuestions)
+        .innerJoin(questions, eq(questions.id, mockTestQuestions.questionId))
+        .where(eq(mockTestQuestions.mockTestId, mockTest.id))
+        .orderBy(mockTestQuestions.orderNumber);
+
+      res.json({ ...mockTest, questions });
+  } catch (error: any) {
+    console.error("Error fetching mock test:", error);
+    res.status(500).send(error.message);
+  }
+});
 
   const httpServer = createServer(app);
   return httpServer;

@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, decimal, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, decimal, jsonb, date } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 
 export const users = pgTable("users", {
@@ -15,13 +15,13 @@ export const questions = pgTable("questions", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
   content: text("content").notNull(),
-  category: text("category", { 
-    enum: ["Non-Verbal Reasoning", "Verbal Reasoning", "English", "Mathematics"] 
+  category: text("category", {
+    enum: ["Non-Verbal Reasoning", "Verbal Reasoning", "English", "Mathematics"]
   }).notNull(),
   subCategory: text("subcategory", {
     enum: [
       // NVR subcategories
-      "Pattern Series", "Figure Analysis", "Mirror Images", "Paper Folding", 
+      "Pattern Series", "Figure Analysis", "Mirror Images", "Paper Folding",
       "Cube Construction", "Figure Matrix", "Analogy",
       // Verbal Reasoning subcategories
       "Word Relationships", "Sentence Completion", "Logical Deduction",
@@ -33,12 +33,12 @@ export const questions = pgTable("questions", {
     ]
   }).notNull(),
   difficulty: text("difficulty", { enum: ["easy", "medium", "hard"] }).notNull(),
-  questionType: text("question_type", { 
+  questionType: text("question_type", {
     enum: [
       "text", "math_formula", "image_based", "diagram",
       "pattern_matching", "spatial_reasoning", "sequence",
       "mixed"
-    ] 
+    ]
   }).notNull(),
   contentType: jsonb("content_type").notNull().default({
     hasFormula: false,
@@ -128,7 +128,7 @@ export const studentEngagement = pgTable("student_engagement", {
   userId: integer("user_id").references(() => users.id).notNull(),
   loginStreak: integer("login_streak").notNull().default(0),
   lastLogin: timestamp("last_login").notNull(),
-  totalTimeSpent: integer("total_time_spent").notNull().default(0), 
+  totalTimeSpent: integer("total_time_spent").notNull().default(0),
   completedLessons: integer("completed_lessons").notNull().default(0),
   questionsAnswered: integer("questions_answered").notNull().default(0),
   correctAnswers: integer("correct_answers").notNull().default(0),
@@ -143,7 +143,7 @@ export const rewards = pgTable("rewards", {
   type: text("type", {
     enum: ["badge", "certificate", "bonus_points", "special_access"]
   }).notNull(),
-  requirements: jsonb("requirements").notNull(), 
+  requirements: jsonb("requirements").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -155,6 +155,59 @@ export const studentRewards = pgTable("student_rewards", {
   status: text("status", {
     enum: ["active", "expired", "consumed"]
   }).notNull().default("active"),
+});
+
+export const mockTests = pgTable("mock_tests", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description"),
+  type: text("type", {
+    enum: ["subject_specific", "mixed"]
+  }).notNull(),
+  duration: integer("duration").notNull(), // in minutes
+  totalQuestions: integer("total_questions").notNull(),
+  rules: jsonb("rules").notNull().default({
+    subjectDistribution: {},
+    subTopicDistribution: {},
+    difficultyDistribution: {}
+  }),
+  isActive: boolean("is_active").default(true).notNull(),
+  scheduledFor: date("scheduled_for"),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const mockTestQuestions = pgTable("mock_test_questions", {
+  id: serial("id").primaryKey(),
+  mockTestId: integer("mock_test_id").references(() => mockTests.id).notNull(),
+  questionId: integer("question_id").references(() => questions.id).notNull(),
+  orderNumber: integer("order_number").notNull(),
+  marks: integer("marks").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const mockTestSessions = pgTable("mock_test_sessions", {
+  id: serial("id").primaryKey(),
+  mockTestId: integer("mock_test_id").references(() => mockTests.id).notNull(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time"),
+  status: text("status", {
+    enum: ["in_progress", "completed", "abandoned"]
+  }).notNull().default("in_progress"),
+  score: integer("score"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const mockTestAnswers = pgTable("mock_test_answers", {
+  id: serial("id").primaryKey(),
+  sessionId: integer("session_id").references(() => mockTestSessions.id).notNull(),
+  questionId: integer("question_id").references(() => questions.id).notNull(),
+  selectedOption: integer("selected_option"),
+  isCorrect: boolean("is_correct"),
+  timeSpent: integer("time_spent"), // in seconds
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const insertUserSchema = createInsertSchema(users);
@@ -216,3 +269,23 @@ export const insertStudentRewardSchema = createInsertSchema(studentRewards);
 export const selectStudentRewardSchema = createSelectSchema(studentRewards);
 export type InsertStudentReward = typeof studentRewards.$inferInsert;
 export type SelectStudentReward = typeof studentRewards.$inferSelect;
+
+export const insertMockTestSchema = createInsertSchema(mockTests);
+export const selectMockTestSchema = createSelectSchema(mockTests);
+export type InsertMockTest = typeof mockTests.$inferInsert;
+export type SelectMockTest = typeof mockTests.$inferSelect;
+
+export const insertMockTestQuestionSchema = createInsertSchema(mockTestQuestions);
+export const selectMockTestQuestionSchema = createSelectSchema(mockTestQuestions);
+export type InsertMockTestQuestion = typeof mockTestQuestions.$inferInsert;
+export type SelectMockTestQuestion = typeof mockTestQuestions.$inferSelect;
+
+export const insertMockTestSessionSchema = createInsertSchema(mockTestSessions);
+export const selectMockTestSessionSchema = createSelectSchema(mockTestSessions);
+export type InsertMockTestSession = typeof mockTestSessions.$inferInsert;
+export type SelectMockTestSession = typeof mockTestSessions.$inferSelect;
+
+export const insertMockTestAnswerSchema = createInsertSchema(mockTestAnswers);
+export const selectMockTestAnswerSchema = createSelectSchema(mockTestAnswers);
+export type InsertMockTestAnswer = typeof mockTestAnswers.$inferInsert;
+export type SelectMockTestAnswer = typeof mockTestAnswers.$inferSelect;
