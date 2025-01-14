@@ -318,6 +318,40 @@ export const transactions = pgTable("transactions", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const subscriptionPlans = pgTable("subscription_plans", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  duration: integer("duration").notNull(), // in days
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  features: jsonb("features").notNull().default({
+    mockTests: false,
+    liveClasses: false,
+    studyMaterials: false,
+    tutorSupport: false,
+    analysisReports: false
+  }),
+  maxMockTests: integer("max_mock_tests"), // null means unlimited
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const userSubscriptions = pgTable("user_subscriptions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  planId: integer("plan_id").references(() => subscriptionPlans.id).notNull(),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  status: text("status", {
+    enum: ["active", "expired", "cancelled"]
+  }).notNull().default("active"),
+  paymentId: integer("payment_id").references(() => payments.id),
+  usedMockTests: integer("used_mock_tests").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const insertUserSchema = createInsertSchema(users);
 export const selectUserSchema = createSelectSchema(users);
 export type InsertUser = typeof users.$inferInsert;
@@ -427,3 +461,13 @@ export const insertTransactionSchema = createInsertSchema(transactions);
 export const selectTransactionSchema = createSelectSchema(transactions);
 export type InsertTransaction = typeof transactions.$inferInsert;
 export type SelectTransaction = typeof transactions.$inferSelect;
+
+export const insertSubscriptionPlanSchema = createInsertSchema(subscriptionPlans);
+export const selectSubscriptionPlanSchema = createSelectSchema(subscriptionPlans);
+export type InsertSubscriptionPlan = typeof subscriptionPlans.$inferInsert;
+export type SelectSubscriptionPlan = typeof subscriptionPlans.$inferSelect;
+
+export const insertUserSubscriptionSchema = createInsertSchema(userSubscriptions);
+export const selectUserSubscriptionSchema = createSelectSchema(userSubscriptions);
+export type InsertUserSubscription = typeof userSubscriptions.$inferInsert;
+export type SelectUserSubscription = typeof userSubscriptions.$inferSelect;

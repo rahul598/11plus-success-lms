@@ -5,7 +5,8 @@ import { db } from "@db";
 import { 
   users, questions, courses, tutors, payments, studentProgress,
   mockTests, mockTestQuestions, mockTestSessions, mockTestAnswers,
-  events, eventParticipants, notifications, media, studentAchievements, studentEngagement, rewards, studentRewards
+  events, eventParticipants, notifications, media, studentAchievements, 
+  studentEngagement, rewards, studentRewards, subscriptionPlans, userSubscriptions
 } from "@db/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
 import multer from "multer";
@@ -37,6 +38,22 @@ function requireAdmin(req: Request, res: Response, next: NextFunction) {
     return next();
   }
   res.status(403).send("Forbidden");
+}
+
+// Add this middleware after the existing requireAuth and requireAdmin middleware
+function requireSubscription(feature: keyof typeof subscriptionPlans.features) {
+  return async (req: Request & { user?: Express.User }, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+
+    const hasAccess = await checkSubscriptionAccess(req.user.id, feature);
+    if (!hasAccess) {
+      return res.status(403).send("This content requires an active subscription");
+    }
+
+    next();
+  };
 }
 
 export function registerRoutes(app: Express): Server {
@@ -95,7 +112,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Mock Test Routes
-  app.get("/api/mock-tests", requireAuth, async (_req, res) => {
+  app.get("/api/mock-tests", requireAuth, requireSubscription("mockTests"), async (_req, res) => {
     try {
       const allTests = await db
         .select()
@@ -108,7 +125,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.post("/api/mock-tests", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+  app.post("/api/mock-tests", requireAuth, requireSubscription("mockTests"), async (req: Request & { user?: Express.User }, res) => {
     if (!req.user) {
       return res.status(401).send("Unauthorized");
     }
@@ -136,7 +153,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Mock Test Generation
-  app.post("/api/mock-tests/generate", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+  app.post("/api/mock-tests/generate", requireAuth, requireSubscription("mockTests"), async (req: Request & { user?: Express.User }, res) => {
     if (!req.user) {
       return res.status(401).send("Unauthorized");
     }
@@ -343,9 +360,9 @@ export function registerRoutes(app: Express): Server {
     } catch (error: any) {
         res.status(500).send(error.message);
     }
-});
+  });
 
-app.post("/api/courses/import", requireAdmin, upload.single("file"), async (req, res) => {
+  app.post("/api/courses/import", requireAdmin, upload.single("file"), async (req, res) => {
     if (!req.file) {
         return res.status(400).send("No file uploaded");
     }
@@ -386,7 +403,7 @@ app.post("/api/courses/import", requireAdmin, upload.single("file"), async (req,
     } catch (error: any) {
         res.status(500).send(error.message);
     }
-});
+  });
 
 
   // Stats endpoints
@@ -483,7 +500,6 @@ app.post("/api/courses/import", requireAdmin, upload.single("file"), async (req,
           eq(mockTestSessions.userId, req.user.id),
           eq(mockTestSessions.status, "in_progress")
         ));
-
 
       const [achievements] = await db
         .select({ count: sql<number>`count(*)` })
@@ -1068,6 +1084,159 @@ app.post("/api/courses/import", requireAdmin, upload.single("file"), async (req,
         }
     });
 
-    const httpServer = createServer(app);
-    return httpServer;
+  // Subscription Plan Routes
+  app.get("/api/subscription-plans", async (_req, res) => {
+    try {
+      const plans = await db
+        .select()
+        .from(subscriptionPlans)
+        .where(eq(subscriptionPlans.isActive, true))
+        .orderBy(subscriptionPlans.price);
+      res.json(plans);
+    } catch (error: any) {
+      console.error("Error fetching subscription plans:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.post("/api/subscription-plans", requireAdmin, async (req, res) => {
+    try {
+      const [plan] = await db
+        .insert(subscriptionPlans)
+        .values(req.body)
+        .returning();
+      res.json(plan);
+    } catch (error: any) {
+      console.error("Error creating subscription plan:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  // User Subscription Routes
+  app.get("/api/subscriptions", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+
+    try {
+      const subscriptions = await db
+        .select({
+          subscription: userSubscriptions,
+          plan: {
+            id: subscriptionPlans.id,
+            name: subscriptionPlans.name,
+            features: subscriptionPlans.features
+          }
+        })
+        .from(userSubscriptions)
+        .innerJoin(subscriptionPlans, eq(subscriptionPlans.id, userSubscriptions.planId))
+        .where(
+          and(
+            eq(userSubscriptions.userId, req.user.id),
+            eq(userSubscriptions.status, "active")
+          )
+        );
+
+      res.json(subscriptions);
+    } catch (error: any) {
+      console.error("Error fetching user subscriptions:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.post("/api/subscriptions/purchase", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+
+    try {
+      const { planId } = req.body;
+      const [plan] = await db
+        .select()
+        .from(subscriptionPlans)
+        .where(
+          and(
+            eq(subscriptionPlans.id, planId),
+            eq(subscriptionPlans.isActive, true)
+          )
+        )
+        .limit(1);
+
+      if (!plan) {
+        return res.status(404).send("Subscription plan not found");
+      }
+
+      // Create payment record
+      const [payment] = await db
+        .insert(payments)
+        .values({
+          userId: req.user.id,
+          amount: plan.price,
+          status: "pending",
+          type: "subscription"
+        })
+        .returning();
+
+      const startDate = new Date();
+      const endDate = new Date();
+      endDate.setDate(endDate.getDate() + plan.duration);
+
+      // Create subscription
+      const [subscription] = await db
+        .insert(userSubscriptions)
+        .values({
+          userId: req.user.id,
+          planId: plan.id,
+          startDate,
+          endDate,
+          paymentId: payment.id
+        })
+        .returning();
+
+      // Add notification
+      await db
+        .insert(notifications)
+        .values({
+          userId: req.user.id,
+          title: "New Subscription Activated",
+          content: `Your ${plan.name} subscription has been activated and is valid until ${endDate.toLocaleDateString()}`,
+          type: "system"
+        });
+
+      res.json({ subscription, payment });
+    } catch (error: any) {
+      console.error("Error purchasing subscription:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  const httpServer = createServer(app);
+  return httpServer;
+}
+
+async function checkSubscriptionAccess(userId: number, feature: keyof typeof subscriptionPlans.features): Promise<boolean> {
+  const activeSubscription = await db
+    .select({
+      subscription: userSubscriptions,
+      plan: {
+        features: subscriptionPlans.features
+      }
+    })
+    .from(userSubscriptions)
+    .innerJoin(subscriptionPlans, eq(subscriptionPlans.id, userSubscriptions.planId))
+    .where(
+      and(
+        eq(userSubscriptions.userId, userId),
+        eq(userSubscriptions.status, "active"),
+        sql`${userSubscriptions.endDate} > NOW()`
+      )
+    )
+    .limit(1);
+
+  if (!activeSubscription.length) {
+    return false;
+  }
+
+  const { plan } = activeSubscription[0];
+  return plan.features[feature] === true;
 }
