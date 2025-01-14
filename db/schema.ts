@@ -56,6 +56,20 @@ export const questions = pgTable("questions", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const questionCategories = pgTable("question_categories", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  parentId: integer("parent_id").references(() => questionCategories.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertQuestionCategorySchema = createInsertSchema(questionCategories);
+export const selectQuestionCategorySchema = createSelectSchema(questionCategories);
+export type InsertQuestionCategory = typeof questionCategories.$inferInsert;
+export type SelectQuestionCategory = typeof questionCategories.$inferSelect;
+
 export const courses = pgTable("courses", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),

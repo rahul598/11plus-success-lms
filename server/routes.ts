@@ -24,6 +24,7 @@ import {
   subscriptionPlans,
   userSubscriptions,
   products,
+  questionCategories,
 } from "@db/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
 import multer from "multer";
@@ -994,10 +995,8 @@ export function registerRoutes(app: Express): Server {
               isCorrect,              feedback,
               confidenceLevel: calculateConfidenceLevel(answer.timeSpent),
               mistakeCategory: !isCorrect ? categorizeMistake(answer.selectedOption, question.correctAnswer) : null,
-            })
-            .where(eq(mockTestAnswers.id, answer.id))
+            })            .where(eq(mockTestAnswers.id, answer.id))
             .returning();
-
           return updatedAnswer;
         })
       );
@@ -1542,6 +1541,56 @@ export function registerRoutes(app: Express): Server {
       res.json(subscriptions);
     } catch (error: any) {
       console.error("Error fetching user subscriptions:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  // Question Categories
+  app.get("/api/questions/categories", requireAuth, async (_req, res) => {
+    try {
+      const categories = await db
+        .select()
+        .from(questionCategories)
+        .orderBy(questionCategories.name);
+      res.json(categories);
+    } catch (error: any) {
+      console.error("Error fetching question categories:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.post("/api/questions/categories", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const [category] = await db
+        .insert(questionCategories)
+        .values({
+          name: req.body.name,
+          description: req.body.description,
+          parentId: req.body.parentId,
+        })
+        .returning();
+      res.json(category);
+    } catch (error: any) {
+      console.error("Error creating question category:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.put("/api/questions/categories/:id", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const categoryId = parseInt(req.params.id);
+      const [category] = await db
+        .update(questionCategories)
+        .set({
+          name: req.body.name,
+          description: req.body.description,
+          parentId: req.body.parentId,
+        })
+        .where(eq(questionCategories.id, categoryId))
+        .returning();
+      res.json(category);
+    } catch (error: any) {
+      console.error("Error updating question category:", error);
       res.status(500).send(error.message);
     }
   });
