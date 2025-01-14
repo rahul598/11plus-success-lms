@@ -121,43 +121,122 @@ export function registerRoutes(app: Express): Server {
     res.json(progress);
   });
 
-  // Analytics
+  // Analytics endpoint with enhanced data
   app.get("/api/analytics", requireAdmin, async (_req, res) => {
-    // User growth data (last 7 days)
+    // User growth data (last 30 days)
     const userGrowth = await db.execute<{ date: string; count: number }>(sql`
       SELECT 
         DATE(created_at) as date,
         COUNT(*) as count
       FROM users
-      WHERE created_at >= NOW() - INTERVAL '7 days'
+      WHERE created_at >= NOW() - INTERVAL '30 days'
       GROUP BY DATE(created_at)
       ORDER BY date
     `);
 
-    // Course completion rates
-    const courseCompletion = await db.execute<{ courseName: string; completionRate: number }>(sql`
-      SELECT 
-        c.title as "courseName",
-        AVG(sp.progress) as "completionRate"
-      FROM courses c
-      LEFT JOIN student_progress sp ON c.id = sp.course_id
-      GROUP BY c.id, c.title
+    // Course performance metrics
+    const courseMetrics = await db.execute<{
+      courseName: string;
+      completionRate: number;
+      averageProgress: number;
+      totalEnrollments: number;
+      revenue: number;
+    }>(sql`
+      WITH course_stats AS (
+        SELECT 
+          c.id,
+          c.title as "courseName",
+          COUNT(DISTINCT sp.user_id) as "totalEnrollments",
+          AVG(sp.progress) as "averageProgress",
+          COUNT(CASE WHEN sp.progress = 100 THEN 1 END)::float / 
+            NULLIF(COUNT(sp.user_id), 0) * 100 as "completionRate",
+          COALESCE(SUM(p.amount::numeric), 0) as revenue
+        FROM courses c
+        LEFT JOIN student_progress sp ON c.id = sp.course_id
+        LEFT JOIN payments p ON c.id = p.course_id AND p.status = 'completed'
+        GROUP BY c.id, c.title
+      )
+      SELECT *
+      FROM course_stats
+      ORDER BY "totalEnrollments" DESC
     `);
 
-    // Question statistics by difficulty
-    const questionStats = await db.execute<{ difficulty: string; count: number; successRate: number }>(sql`
+    // Question analytics
+    const questionAnalytics = await db.execute<{
+      difficulty: string;
+      count: number;
+      averageAttempts: number;
+      successRate: number;
+    }>(sql`
+      WITH question_stats AS (
+        SELECT 
+          q.difficulty,
+          COUNT(*) as count,
+          AVG(sp.attempts) as "averageAttempts",
+          COUNT(CASE WHEN sp.completed THEN 1 END)::float / 
+            NULLIF(COUNT(*), 0) * 100 as "successRate"
+        FROM questions q
+        LEFT JOIN student_progress sp ON q.id = sp.question_id
+        GROUP BY q.difficulty
+      )
+      SELECT *
+      FROM question_stats
+      ORDER BY difficulty
+    `);
+
+    // Revenue analytics
+    const revenueAnalytics = await db.execute<{
+      period: string;
+      revenue: number;
+      transactionCount: number;
+    }>(sql`
+      WITH monthly_revenue AS (
+        SELECT 
+          DATE_TRUNC('month', created_at) as period,
+          SUM(amount::numeric) as revenue,
+          COUNT(*) as "transactionCount"
+        FROM payments
+        WHERE status = 'completed'
+        AND created_at >= NOW() - INTERVAL '12 months'
+        GROUP BY period
+        ORDER BY period DESC
+      )
       SELECT 
-        difficulty,
-        COUNT(*) as count,
-        50 + RANDOM() * 30 as "successRate"
-      FROM questions
-      GROUP BY difficulty
+        to_char(period, 'Month YYYY') as period,
+        revenue,
+        "transactionCount"
+      FROM monthly_revenue
+    `);
+
+    // User engagement metrics
+    const userEngagement = await db.execute<{
+      period: string;
+      activeUsers: number;
+      averageTimeSpent: number;
+    }>(sql`
+      WITH user_activity AS (
+        SELECT 
+          DATE_TRUNC('week', sp.last_activity) as period,
+          COUNT(DISTINCT sp.user_id) as "activeUsers",
+          AVG(sp.time_spent) as "averageTimeSpent"
+        FROM student_progress sp
+        WHERE sp.last_activity >= NOW() - INTERVAL '12 weeks'
+        GROUP BY period
+        ORDER BY period DESC
+      )
+      SELECT 
+        to_char(period, 'DD Mon YYYY') as period,
+        "activeUsers",
+        "averageTimeSpent"
+      FROM user_activity
     `);
 
     res.json({
       userGrowth,
-      courseCompletion,
-      questionStats,
+      courseMetrics,
+      questionAnalytics,
+      revenueAnalytics,
+      userEngagement,
     });
   });
 
