@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { useUser } from "@/hooks/use-user";
 import { useSubscription } from "@/hooks/use-subscription";
+import { useState } from "react";
 import {
   LayoutDashboard,
   Users,
@@ -23,7 +24,9 @@ import {
   FileText,
   ShoppingCart,
   LineChart,
-  Crown
+  Crown,
+  ChevronDown,
+  ChevronRight
 } from "lucide-react";
 
 interface SubscriptionFeatures {
@@ -114,6 +117,7 @@ export function Sidebar() {
   const { isOpen, toggle } = useSidebar();
   const { user } = useUser();
   const { hasFeature } = useSubscription();
+  const [openMenus, setOpenMenus] = useState<string[]>([]);
 
   const navigation = user?.role === "admin"
     ? adminNavigation
@@ -121,24 +125,54 @@ export function Sidebar() {
       ? tutorNavigation
       : studentNavigation;
 
+  const toggleMenu = (menuName: string) => {
+    setOpenMenus(prev => 
+      prev.includes(menuName) 
+        ? prev.filter(name => name !== menuName)
+        : [...prev, menuName]
+    );
+  };
+
   const renderNavItem = (item: NavigationItem) => {
-    // If item requires a feature and user doesn't have access, don't show it
     if (item.requiredFeature && !hasFeature(item.requiredFeature)) {
       return null;
     }
 
+    const isMenuOpen = openMenus.includes(item.name);
+
     if (item.children) {
       return (
         <div key={item.name} className="space-y-1">
-          <div className={cn(
-            "flex items-center px-3 py-2 text-sm font-medium",
-            isOpen ? "justify-start" : "justify-center",
-            "text-sidebar-foreground"
-          )}>
-            <item.icon className="h-4 w-4" />
-            {isOpen && <span className="ml-3">{item.name}</span>}
-          </div>
-          <div className={cn("pl-3 space-y-1", !isOpen && "pl-0")}>
+          <Button
+            variant="ghost"
+            className={cn(
+              "w-full justify-between",
+              isOpen ? "px-3" : "px-2",
+              "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+            )}
+            onClick={() => toggleMenu(item.name)}
+          >
+            <div className="flex items-center">
+              {item.icon && <item.icon className="h-4 w-4" />}
+              {isOpen && <span className="ml-3">{item.name}</span>}
+            </div>
+            {isOpen && (
+              <div className="transition-transform duration-200">
+                {isMenuOpen ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </div>
+            )}
+          </Button>
+          <div
+            className={cn(
+              "overflow-hidden transition-all duration-200",
+              isMenuOpen ? "max-h-96" : "max-h-0",
+              isOpen ? "pl-3" : "pl-0"
+            )}
+          >
             {item.children.map((child) => {
               if (child.requiredFeature && !hasFeature(child.requiredFeature)) {
                 return null;
@@ -156,7 +190,7 @@ export function Sidebar() {
                         : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
                     )}
                   >
-                    <Icon className="h-4 w-4" />
+                    {Icon && <Icon className="h-4 w-4" />}
                     {isOpen && <span className="ml-3">{child.name}</span>}
                   </Button>
                 </Link>
@@ -179,7 +213,7 @@ export function Sidebar() {
               : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
           )}
         >
-          <Icon className="h-4 w-4" />
+          {Icon && <Icon className="h-4 w-4" />}
           {isOpen && <span className="ml-3">{item.name}</span>}
         </Button>
       </Link>
