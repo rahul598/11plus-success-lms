@@ -1,0 +1,82 @@
+9:24:39 PM [express] POST /api/login 200 in 1240ms :: {"message":"Login successful","user":{"id":3,"username":"admin","password":"587ecd3d5b9281cbc950126b3d1e217670c5fd6215234ab49232ca1f6f27138e400616e5fabd9afb4ee98bd02c68e31c6904f71a539fec9502ffb87366582c65.5f66370d60abfa966a86c9d0e3136de9","email":"admin@example.com","role":"admin","createdAt":"2025-01-14T16:47:29.768Z","lastLogin":"2025-01-14T21:23:34.637Z"}}
+9:24:39 PM [express] GET /api/user 200 in 232ms :: {"id":3,"username":"admin","password":"587ecd3d5b9281cbc950126b3d1e217670c5fd6215234ab49232ca1f6f27138e400616e5fabd9afb4ee98bd02c68e31c6904f71a539fec9502ffb87366582c65.5f66370d60abfa966a86c9d0e3136de9","email":"admin@example.com","role":"admin","createdAt":"2025-01-14T16:47:29.768Z","lastLogin":"2025-01-14T21:24:39.024Z"}
+New client connected: c4i8MDcEu2X4KSyoAAAQ
+New client connected: W6QYCHRdVFKX3jOOAAAR
+Error fetching user subscriptions: error: relation "user_subscriptions" does not exist
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:1143:29) {
+  length: 118,
+  severity: 'ERROR',
+  code: '42P01',
+  detail: undefined,
+  hint: undefined,
+  position: '436',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '1449',
+  routine: 'parserOpenTable'
+}
+9:24:40 PM [express] GET /api/subscriptions 500 in 479ms
+9:24:41 PM [express] GET /api/stats 304 in 1884ms :: {"users":"1","questions":"3","tutors":"0","revenue":0}
+New client connected: vvnuiONblkoMZMgTAAAU
+Error fetching user subscriptions: error: relation "user_subscriptions" does not exist
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:1143:29) {
+  length: 118,
+  severity: 'ERROR',
+  code: '42P01',
+  detail: undefined,
+  hint: undefined,
+  position: '436',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '1449',
+  routine: 'parserOpenTable'
+}
+9:24:48 PM [express] GET /api/subscriptions 500 in 458ms
+file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345
+o?t(o):n(u)},"cb"),s=new r(function(o,u){n=o,t=u}).catch(o=>{throw Error.captureStackTrace(
+                                                                         ^
+
+error: relation "user_subscriptions" does not exist
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async checkSubscriptionAccess (/home/runner/workspace/server/routes.ts:1595:30)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:67:23) {
+  length: 118,
+  severity: 'ERROR',
+  code: '42P01',
+  detail: undefined,
+  hint: undefined,
+  position: '380',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '1449',
+  routine: 'parserOpenTable'
+}

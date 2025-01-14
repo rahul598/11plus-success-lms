@@ -22,14 +22,14 @@ import {
   Tags,
   FileText,
   ShoppingCart,
-  LineChart
+  LineChart,
+  Crown
 } from "lucide-react";
 
 interface SubscriptionFeatures {
   mockTests?: boolean;
   studyMaterials?: boolean;
   analysisReports?: boolean;
-  // Add other features as needed
 }
 
 interface NavigationItem {
@@ -58,6 +58,7 @@ const adminNavigation: NavigationItem[] = [
       { name: "Orders", href: "/dashboard/products/orders", icon: FileText }
     ]
   },
+  { name: "Subscriptions", href: "/dashboard/subscriptions", icon: Crown },
   { name: "Payments", href: "/dashboard/payments", icon: CreditCard },
   { name: "Tutors", href: "/dashboard/tutors", icon: GraduationCap },
   { name: "Courses", href: "/dashboard/courses", icon: Library },
@@ -104,6 +105,7 @@ const studentNavigation: NavigationItem[] = [
     href: "/dashboard/achievements", 
     icon: Award 
   },
+  { name: "My Subscription", href: "/dashboard/my-subscription", icon: Crown },
   { name: "Profile", href: "/dashboard/profile", icon: UserCircle },
 ];
 
