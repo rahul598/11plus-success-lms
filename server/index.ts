@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { setupWebSocketServer } from "./socket";
 
 const app = express();
 app.use(express.json());
@@ -36,6 +37,9 @@ app.use((req, res, next) => {
   try {
     // First register all API routes
     const server = registerRoutes(app);
+
+    // Setup WebSocket server
+    setupWebSocketServer(server);
 
     // Error handling middleware
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
