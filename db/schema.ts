@@ -15,10 +15,45 @@ export const questions = pgTable("questions", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
   content: text("content").notNull(),
-  category: text("category").notNull(),
+  category: text("category", { 
+    enum: ["Non-Verbal Reasoning", "Verbal Reasoning", "English", "Mathematics", "General"] 
+  }).notNull(),
+  subCategory: text("sub_category", {
+    enum: [
+      // NVR subcategories
+      "Pattern Series", "Figure Analysis", "Mirror Images", "Paper Folding", 
+      "Cube Construction", "Figure Matrix", "Analogy",
+      // Verbal Reasoning subcategories
+      "Word Relationships", "Sentence Completion", "Logical Deduction",
+      "Sequence Detection", "Coding-Decoding", "Blood Relations",
+      // English subcategories
+      "Grammar", "Comprehension", "Vocabulary", "Writing",
+      // Mathematics subcategories
+      "Algebra", "Geometry", "Arithmetic", "Statistics", "Calculus"
+    ]
+  }).notNull(),
   difficulty: text("difficulty", { enum: ["easy", "medium", "hard"] }).notNull(),
+  questionType: text("question_type", { 
+    enum: [
+      "text", "math_formula", "image_based", "diagram",
+      "pattern_matching", "spatial_reasoning", "sequence",
+      "mixed"
+    ] 
+  }).notNull(),
+  content_type: jsonb("content_type").notNull().default({
+    hasFormula: false,
+    hasImage: false,
+    hasPattern: false,
+    hasDiagram: false
+  }),
+  options: jsonb("options").notNull(),
+  correctAnswer: integer("correct_answer").notNull(),
+  explanation: text("explanation"),
+  hints: jsonb("hints").default([]),
+  metadata: jsonb("metadata").default({}),
   createdBy: integer("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const courses = pgTable("courses", {
@@ -93,7 +128,7 @@ export const studentEngagement = pgTable("student_engagement", {
   userId: integer("user_id").references(() => users.id).notNull(),
   loginStreak: integer("login_streak").notNull().default(0),
   lastLogin: timestamp("last_login").notNull(),
-  totalTimeSpent: integer("total_time_spent").notNull().default(0), // in minutes
+  totalTimeSpent: integer("total_time_spent").notNull().default(0), 
   completedLessons: integer("completed_lessons").notNull().default(0),
   questionsAnswered: integer("questions_answered").notNull().default(0),
   correctAnswers: integer("correct_answers").notNull().default(0),
@@ -108,7 +143,7 @@ export const rewards = pgTable("rewards", {
   type: text("type", {
     enum: ["badge", "certificate", "bonus_points", "special_access"]
   }).notNull(),
-  requirements: jsonb("requirements").notNull(), // JSON structure for complex requirements
+  requirements: jsonb("requirements").notNull(), 
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
