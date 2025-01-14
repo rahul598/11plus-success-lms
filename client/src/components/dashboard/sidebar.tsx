@@ -20,7 +20,6 @@ import {
   UserCircle,
   Package,
   Tags,
-  Boxes,
   FileText,
   ShoppingCart,
 } from "lucide-react";
@@ -47,8 +46,7 @@ const adminNavigation: NavigationItem[] = [
     children: [
       { name: "All Products", href: "/dashboard/products", icon: Package },
       { name: "Categories", href: "/dashboard/products/categories", icon: Tags },
-      { name: "Inventory", href: "/dashboard/products/inventory", icon: Boxes },
-      { name: "Orders", href: "/dashboard/products/orders", icon: FileText },
+      { name: "Orders", href: "/dashboard/products/orders", icon: FileText }
     ]
   },
   { name: "Payments", href: "/dashboard/payments", icon: CreditCard },
