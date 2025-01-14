@@ -74,10 +74,15 @@ function requireAdmin(req: Request, res: Response, next: NextFunction) {
 }
 
 // Add this middleware after the existing requireAuth and requireAdmin middleware
-function requireSubscription(feature: keyof typeof subscriptionPlans.features) {
+function requireSubscription(feature: string) {
   return async (req: Request & { user?: Express.User }, res: Response, next: NextFunction) => {
     if (!req.user) {
       return res.status(401).send("Unauthorized");
+    }
+
+    // Admin users bypass subscription check
+    if (req.user.role === "admin") {
+      return next();
     }
 
     const hasAccess = await checkSubscriptionAccess(req.user.id, feature);
@@ -1545,29 +1550,39 @@ export function registerRoutes(app: Express): Server {
   return httpServer;
 }
 
-async function checkSubscriptionAccess(userId: number, feature: keyof typeof subscriptionPlans.features): Promise<boolean> {
-  const activeSubscription = await db
-    .select({
-      subscription: userSubscriptions,
-      plan: {
-        features: subscriptionPlans.features,
-      },
-    })
-    .from(userSubscriptions)
-    .innerJoin(subscriptionPlans, eq(subscriptionPlans.id, userSubscriptions.planId))
-    .where(
-      and(
-        eq(userSubscriptions.userId, userId),
-        eq(userSubscriptions.status, "active"),
-        sql`${userSubscriptions.endDate} > NOW()`
+async function checkSubscriptionAccess(userId: number, feature: string): Promise<boolean> {
+  try {
+    const [subscription] = await db
+      .select({
+        subscription: userSubscriptions,
+        plan: {
+          features: subscriptionPlans.features
+        }
+      })
+      .from(userSubscriptions)
+      .innerJoin(
+        subscriptionPlans,
+        eq(subscriptionPlans.id, userSubscriptions.planId)
       )
-    )
-    .limit(1);
+      .where(
+        and(
+          eq(userSubscriptions.userId, userId),
+          eq(userSubscriptions.status, "active")
+        )
+      )
+      .orderBy(desc(userSubscriptions.startDate))
+      .limit(1);
 
-  if (!activeSubscription.length) {
+    // If user has no active subscription
+    if (!subscription) {
+      return false;
+    }
+
+    // Check if feature is enabled in the plan
+    const planFeatures = subscription.plan.features as Record<string, { enabled: boolean; limit?: number }>;
+    return planFeatures[feature]?.enabled ?? false;
+  } catch (error) {
+    console.error("Error checking subscription access:", error);
     return false;
   }
-
-  const { plan } = activeSubscription[0];
-  return plan.features[feature] === true;
 }
