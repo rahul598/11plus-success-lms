@@ -4,7 +4,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import 'katex/dist/katex.min.css';
-import { InlineMath, BlockMath } from "@matejmazur/react-katex";
+import BlockMath from "@matejmazur/react-katex";
+import InlineMath from "@matejmazur/react-katex";
 import {
   Form,
   FormControl,
