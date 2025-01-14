@@ -29,7 +29,7 @@ export function ChatWindow({ onClose }: ChatWindowProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [socket, setSocket] = useState<Socket | null>(null);
-  const [selectedUser, setSelectedUser] = useState<string>("");
+  const [selectedUser, setSelectedUser] = useState<string>("all");
   const { user } = useUser();
 
   useEffect(() => {
@@ -56,7 +56,8 @@ export function ChatWindow({ onClose }: ChatWindowProps) {
 
   const sendMessage = () => {
     if (inputMessage.trim() && socket) {
-      socket.emit("sendMessage", inputMessage, selectedUser || undefined);
+      // Only send the recipient ID if it's not "all"
+      socket.emit("sendMessage", inputMessage, selectedUser !== "all" ? selectedUser : undefined);
       setInputMessage("");
     }
   };
@@ -70,15 +71,15 @@ export function ChatWindow({ onClose }: ChatWindowProps) {
         <div className="flex items-center gap-2">
           <MessageCircle className="h-4 w-4" />
           <h3 className="font-semibold">Chat</h3>
-          {selectedUser && <span className="text-xs text-muted-foreground">(Private)</span>}
+          {selectedUser !== "all" && <span className="text-xs text-muted-foreground">(Private)</span>}
         </div>
         <div className="flex items-center gap-2">
           <Select value={selectedUser} onValueChange={setSelectedUser}>
             <SelectTrigger className="w-[100px]">
-              <SelectValue placeholder="Everyone" />
+              <SelectValue placeholder="Select recipient" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Everyone</SelectItem>
+              <SelectItem value="all">Everyone</SelectItem>
               {/* Add online users here */}
             </SelectContent>
           </Select>
@@ -128,7 +129,7 @@ export function ChatWindow({ onClose }: ChatWindowProps) {
           <Input
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
-            placeholder={`Message ${selectedUser ? 'privately' : 'everyone'}...`}
+            placeholder={`Message ${selectedUser !== "all" ? 'privately' : 'everyone'}...`}
             className="flex-1"
           />
           <Button type="submit" size="icon">
