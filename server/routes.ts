@@ -1135,7 +1135,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.post("/api/subscription-plans", requireAuth, requireAdmin, async (req: Request & { user?: Express.User }, res) => {
+  app.post("/api/subscriptions/plans", requireAuth, requireAdmin, async (req: Request & { user?: Express.User }, res) => {
     if (!req.user) {
       return res.status(401).send("Unauthorized");
     }
@@ -1497,7 +1497,7 @@ export function registerRoutes(app: Express): Server {
     } catch (error: any) {
       console.error("Error fetching products:", error);
       res.status(500).json({
-        error: "Failed to fetch products", 
+        error: "Failed to fetch products",
         details: error.message
       });
     }

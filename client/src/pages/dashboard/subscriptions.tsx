@@ -35,9 +35,9 @@ export default function SubscriptionsPage() {
   const { toast } = useToast();
 
   const { data: plans, isLoading, error } = useQuery<SubscriptionPlan[]>({
-    queryKey: ["/api/subscription-plans"],
+    queryKey: ["subscriptions"],
     queryFn: async () => {
-      const response = await fetch("/api/subscription-plans");
+      const response = await fetch("/api/subscriptions/plans");
       if (!response.ok) {
         throw new Error(await response.text());
       }
