@@ -6,7 +6,6 @@ import { z } from "zod";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -26,18 +25,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { X } from "lucide-react";
 
 const questionSchema = z.object({
   id: z.number().optional(),
-  title: z.string().min(1, "Title is required"),
-  content: z.string().min(1, "Question content is required"),
   category: z.string().min(1, "Category is required"),
-  difficulty: z.enum(["easy", "medium", "hard"]),
-  points: z.number().min(1).max(100),
-  correctAnswer: z.string().min(1, "Correct answer is required"),
+  quizName: z.string().min(1, "Quiz name is required"),
+  questionType: z.enum(["Text Only", "True/False", "Images"]),
+  questionTitle: z.string().min(1, "Question title is required"),
+  options: z.array(z.string()).min(2, "At least two options are required"),
+  correctAnswer: z.number().min(0, "Correct answer is required"),
   explanation: z.string().optional(),
   createdAt: z.date().optional(),
 });
@@ -47,7 +47,6 @@ type QuestionFormValues = z.infer<typeof questionSchema>;
 interface QuestionEditorProps {
   open: boolean;
   onClose: () => void;
-  editingQuestion?: QuestionFormValues;
 }
 
 const categories = [
@@ -59,20 +58,23 @@ const categories = [
   "Languages",
 ];
 
-export function QuestionEditor({ open, onClose, editingQuestion }: QuestionEditorProps) {
+const quizNames = ["Quiz 1", "Quiz 2", "Quiz 3", "New Quiz"]; // This should be fetched from API
+
+export function QuestionEditor({ open, onClose }: QuestionEditorProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [questionType, setQuestionType] = useState<"Text Only" | "True/False" | "Images">("Text Only");
 
   const form = useForm<QuestionFormValues>({
     resolver: zodResolver(questionSchema),
-    defaultValues: editingQuestion || {
-      title: "",
-      content: "",
+    defaultValues: {
       category: "",
-      difficulty: "medium",
-      points: 10,
-      correctAnswer: "",
+      quizName: "",
+      questionType: "Text Only",
+      questionTitle: "",
+      options: ["", "", "", ""],
+      correctAnswer: 0,
       explanation: "",
     },
   });
@@ -97,7 +99,7 @@ export function QuestionEditor({ open, onClose, editingQuestion }: QuestionEdito
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/questions"] });
       toast({
-        title: `Question ${editingQuestion ? "updated" : "created"} successfully`,
+        title: "Question created successfully",
       });
       onClose();
     },
@@ -123,40 +125,15 @@ export function QuestionEditor({ open, onClose, editingQuestion }: QuestionEdito
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>
-            {editingQuestion ? "Edit Question" : "Create New Question"}
+          <DialogTitle className="flex items-center justify-between">
+            <span>Add Question</span>
+            <Button variant="ghost" size="icon" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
           </DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Title</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="content"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Question Content</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -170,7 +147,7 @@ export function QuestionEditor({ open, onClose, editingQuestion }: QuestionEdito
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select category" />
+                          <SelectValue placeholder="Select Category" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -188,23 +165,25 @@ export function QuestionEditor({ open, onClose, editingQuestion }: QuestionEdito
 
               <FormField
                 control={form.control}
-                name="difficulty"
+                name="quizName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Difficulty</FormLabel>
+                    <FormLabel>Quiz Name</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value}
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select difficulty" />
+                          <SelectValue placeholder="Select Quiz Name" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="easy">Easy</SelectItem>
-                        <SelectItem value="medium">Medium</SelectItem>
-                        <SelectItem value="hard">Hard</SelectItem>
+                        {quizNames.map((quiz) => (
+                          <SelectItem key={quiz} value={quiz}>
+                            {quiz}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -215,22 +194,45 @@ export function QuestionEditor({ open, onClose, editingQuestion }: QuestionEdito
 
             <FormField
               control={form.control}
-              name="points"
+              name="questionType"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Points</FormLabel>
+                <FormItem className="space-y-1">
+                  <FormLabel>Question Type</FormLabel>
                   <FormControl>
-                    <Input
-                      type="number"
-                      min={1}
-                      max={100}
-                      {...field}
-                      onChange={(e) => field.onChange(parseInt(e.target.value))}
-                    />
+                    <RadioGroup
+                      onValueChange={(value: "Text Only" | "True/False" | "Images") => {
+                        field.onChange(value);
+                        setQuestionType(value);
+                      }}
+                      defaultValue={field.value}
+                      className="flex space-x-4"
+                    >
+                      <FormItem className="flex items-center space-x-2">
+                        <FormControl>
+                          <RadioGroupItem value="Text Only" />
+                        </FormControl>
+                        <FormLabel className="font-normal">
+                          Text Only
+                        </FormLabel>
+                      </FormItem>
+                      <FormItem className="flex items-center space-x-2">
+                        <FormControl>
+                          <RadioGroupItem value="True/False" />
+                        </FormControl>
+                        <FormLabel className="font-normal">
+                          True/False
+                        </FormLabel>
+                      </FormItem>
+                      <FormItem className="flex items-center space-x-2">
+                        <FormControl>
+                          <RadioGroupItem value="Images" />
+                        </FormControl>
+                        <FormLabel className="font-normal">
+                          Images
+                        </FormLabel>
+                      </FormItem>
+                    </RadioGroup>
                   </FormControl>
-                  <FormDescription>
-                    Points awarded for correct answer (1-100)
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -238,13 +240,58 @@ export function QuestionEditor({ open, onClose, editingQuestion }: QuestionEdito
 
             <FormField
               control={form.control}
+              name="questionTitle"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Question Title</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="Enter Question" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {["A", "B", "C", "D"].map((option, index) => (
+              <FormField
+                key={option}
+                control={form.control}
+                name={`options.${index}`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Option {option}</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder={`Enter Option ${option}`} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ))}
+
+            <FormField
+              control={form.control}
               name="correctAnswer"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Correct Answer</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
+                  <FormLabel>Correct Answer Index</FormLabel>
+                  <Select
+                    onValueChange={(value) => field.onChange(parseInt(value))}
+                    defaultValue={field.value.toString()}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Correct Answer" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {["A", "B", "C", "D"].map((option, index) => (
+                        <SelectItem key={option} value={index.toString()}>
+                          Option {option}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
@@ -257,22 +304,22 @@ export function QuestionEditor({ open, onClose, editingQuestion }: QuestionEdito
                 <FormItem>
                   <FormLabel>Explanation (Optional)</FormLabel>
                   <FormControl>
-                    <Textarea {...field} />
+                    <div className="border rounded-md p-4">
+                      <Input
+                        {...field}
+                        placeholder="Your text here..."
+                        className="min-h-[100px]"
+                      />
+                    </div>
                   </FormControl>
-                  <FormDescription>
-                    Provide an explanation for the correct answer
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <div className="flex justify-end gap-4">
-              <Button type="button" variant="outline" onClick={onClose}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Saving..." : editingQuestion ? "Update" : "Create"}
+            <div className="flex justify-center">
+              <Button type="submit" disabled={isSubmitting} className="w-full max-w-md">
+                {isSubmitting ? "Uploading..." : "Upload Question"}
               </Button>
             </div>
           </form>
