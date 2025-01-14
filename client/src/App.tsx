@@ -20,6 +20,7 @@ import Products from "@/pages/dashboard/products";
 import ProductCategories from "@/pages/dashboard/products/categories";
 import ProductOrders from "@/pages/dashboard/products/orders";
 import Subscriptions from "@/pages/dashboard/subscriptions";
+import MySubscription from "@/pages/dashboard/my-subscription";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, isLoading } = useUser();
@@ -32,7 +33,7 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
     );
   }
 
-  if (!user || user.role !== "admin") {
+  if (!user) {
     return <AuthPage />;
   }
 
@@ -58,6 +59,7 @@ function Router() {
       <Route path="/dashboard/products/categories" component={() => <ProtectedRoute component={ProductCategories} />} />
       <Route path="/dashboard/products/orders" component={() => <ProtectedRoute component={ProductOrders} />} />
       <Route path="/dashboard/subscriptions" component={() => <ProtectedRoute component={Subscriptions} />} />
+      <Route path="/dashboard/my-subscription" component={() => <ProtectedRoute component={MySubscription} />} />
       <Route path="/" component={() => <ProtectedRoute component={Dashboard} />} />
       <Route component={NotFound} />
     </Switch>
