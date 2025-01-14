@@ -29,6 +29,9 @@ import { eq, desc, and, sql } from "drizzle-orm";
 import multer from "multer";
 import { stringify } from "csv-stringify";
 import { parse } from "csv-parse";
+import * as fs from 'fs';
+import * as path from 'path';
+import { Decimal } from 'decimal.js';
 
 // Configure multer for file uploads
 const upload = multer({ storage: multer.memoryStorage() });
@@ -994,7 +997,8 @@ export function registerRoutes(app: Express): Server {
       await db.insert(notifications).values({
         userId: session.userId,
         title: "Mock Test Results Available",
-        content: `Your mock test results are ready. Score: ${totalScore}/${answers.length}`,        type: "result",
+        content: `Your mock test results are ready. Score: ${totalScore}/${answers.length}`,
+        type: "result",
       });
 
       res.json({
@@ -1443,52 +1447,47 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Product Routes
-  app.post("/api/products", requireAdmin, upload.single("productFile"), async (req: Request & { user?: Express.User }, res) => {
+  app.post("/api/products", requireAuth, requireAdmin, upload.single("file"), async (req: Request & { user?: Express.User }, res) => {
     if (!req.user) {
-      return res.status(401).json({ error: "Unauthorized" });
+      return res.status(401).send("Unauthorized");
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
     }
 
     try {
-      // Check if we have all required data from the form
-      if (!req.body.title || !req.body.description || !req.body.price || !req.body.category) {
-        return res.status(400).json({
-          error: "Missing required fields",
-          required: ["title", "description", "price", "category"],
-          received: req.body
-        });
-      }
+      // Generate a unique filename to prevent collisions
+      const timestamp = Date.now();
+      const filename = `${timestamp}-${req.file.originalname}`;
+      const fileUrl = `/uploads/${filename}`;
 
-      // Handle file upload
-      let fileUrl = '';
-      if (req.file) {
-        fileUrl = `/uploads/${req.file.originalname}`;
-      } else {
-        return res.status(400).json({ error: "Product file is required" });
-      }
+      // Save the file
+      const filePath = path.join(process.cwd(), "public", "uploads", filename);
+      await fs.promises.mkdir(path.dirname(filePath), { recursive: true });
+      await fs.promises.writeFile(filePath, req.file.buffer);
 
-      // Create product in database
+      // Insert product into database with proper price conversion
       const [product] = await db
         .insert(products)
         .values({
           title: req.body.title,
           description: req.body.description,
-          price: parseFloat(req.body.price),
+          price: new Decimal(req.body.price), // Convert string to Decimal
           category: req.body.category,
           fileUrl: fileUrl,
           isActive: true,
-          createdBy: req.user.id,
+          createdBy: req.user.id
         })
         .returning();
 
-      // Return success response
-      return res.status(200).json({
+      res.json({
         message: "Product created successfully",
         product
       });
 
     } catch (error: any) {
       console.error("Error creating product:", error);
-      // Ensure we always return JSON, even for errors
       return res.status(500).json({
         error: "Failed to create product",
         details: error.message
@@ -1496,7 +1495,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Get all products
   app.get("/api/products", requireAuth, async (_req, res) => {
     try {
       const allProducts = await db
@@ -1504,9 +1502,10 @@ export function registerRoutes(app: Express): Server {
         .from(products)
         .orderBy(desc(products.createdAt));
 
-      return res.json(allProducts);
+      res.json(allProducts);
     } catch (error: any) {
-      return res.status(500).json({
+      console.error("Error fetching products:", error);
+      res.status(500).json({
         error: "Failed to fetch products",
         details: error.message
       });
