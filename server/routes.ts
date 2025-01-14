@@ -23,7 +23,7 @@ import {
   studentRewards,
   subscriptionPlans,
   userSubscriptions,
-  products, // Assuming this import is correct
+  products,
 } from "@db/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
 import multer from "multer";
@@ -33,8 +33,21 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { Decimal } from 'decimal.js';
 
-// Configure multer for file uploads
-const upload = multer({ storage: multer.memoryStorage() });
+// Configure multer for file uploads with proper directory
+const storage = multer.diskStorage({
+  destination: function (_req, _file, cb) {
+    const uploadDir = path.join(process.cwd(), 'public', 'uploads');
+    // Create directory if it doesn't exist
+    fs.mkdirSync(uploadDir, { recursive: true });
+    cb(null, uploadDir);
+  },
+  filename: function (_req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + '-' + file.originalname);
+  }
+});
+
+const upload = multer({ storage: storage });
 
 // Extend Express Request type to include file from multer
 declare global {
@@ -424,6 +437,7 @@ export function registerRoutes(app: Express): Server {
       res.status(500).send(error.message);
     }
   });
+
 
 
   // Stats endpoints
@@ -972,8 +986,7 @@ export function registerRoutes(app: Express): Server {
           const [updatedAnswer] = await db
             .update(mockTestAnswers)
             .set({
-              isCorrect,
-              feedback,
+              isCorrect,              feedback,
               confidenceLevel: calculateConfidenceLevel(answer.timeSpent),
               mistakeCategory: !isCorrect ? categorizeMistake(answer.selectedOption, question.correctAnswer) : null,
             })
@@ -1114,49 +1127,36 @@ export function registerRoutes(app: Express): Server {
       const plans = await db
         .select()
         .from(subscriptionPlans)
-        .orderBy(subscriptionPlans.tier);
-
+        .orderBy(desc(subscriptionPlans.createdAt));
       res.json(plans);
     } catch (error: any) {
       console.error("Error fetching subscription plans:", error);
-      res.status(500).json({ error: error.message });
+      res.status(500).send(error.message);
     }
   });
 
-  app.get("/api/subscriptions", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+  app.post("/api/subscription-plans", requireAuth, requireAdmin, async (req: Request & { user?: Express.User }, res) => {
     if (!req.user) {
       return res.status(401).send("Unauthorized");
     }
 
     try {
-      const subscriptions = await db
-        .select({
-          subscription: {
-            id: userSubscriptions.id,
-            startDate: userSubscriptions.startDate,
-            endDate: userSubscriptions.endDate,
-            status: userSubscriptions.status
-          },
-          plan: {
-            id: subscriptionPlans.id,
-            name: subscriptionPlans.name,
-            tier: subscriptionPlans.tier,
-            features: subscriptionPlans.features
-          }
+      const [plan] = await db
+        .insert(subscriptionPlans)
+        .values({
+          name: req.body.name,
+          description: req.body.description,
+          tier: req.body.tier,
+          duration: req.body.duration,
+          price: new Decimal(req.body.price).toString(),
+          features: req.body.features || {},
+          isActive: true
         })
-        .from(userSubscriptions)
-        .innerJoin(subscriptionPlans, eq(subscriptionPlans.id, userSubscriptions.planId))
-        .where(
-          and(
-            eq(userSubscriptions.userId, req.user.id),
-            eq(userSubscriptions.status, "active")
-          )
-        )
-        .orderBy(desc(userSubscriptions.startDate));
+        .returning();
 
-      res.json(subscriptions);
+      res.json(plan);
     } catch (error: any) {
-      console.error("Error fetching user subscriptions:", error);
+      console.error("Error creating subscription plan:", error);
       res.status(500).send(error.message);
     }
   });
@@ -1457,23 +1457,14 @@ export function registerRoutes(app: Express): Server {
     }
 
     try {
-      // Generate a unique filename to prevent collisions
-      const timestamp = Date.now();
-      const filename = `${timestamp}-${req.file.originalname}`;
-      const fileUrl = `/uploads/${filename}`;
+      const fileUrl = `/uploads/${req.file.filename}`;
 
-      // Save the file
-      const filePath = path.join(process.cwd(), "public", "uploads", filename);
-      await fs.promises.mkdir(path.dirname(filePath), { recursive: true });
-      await fs.promises.writeFile(filePath, req.file.buffer);
-
-      // Insert product into database with proper price conversion
       const [product] = await db
         .insert(products)
         .values({
           title: req.body.title,
           description: req.body.description,
-          price: new Decimal(req.body.price), // Convert string to Decimal
+          price: new Decimal(req.body.price).toString(), // Convert to string for storage
           category: req.body.category,
           fileUrl: fileUrl,
           isActive: true,
@@ -1506,9 +1497,47 @@ export function registerRoutes(app: Express): Server {
     } catch (error: any) {
       console.error("Error fetching products:", error);
       res.status(500).json({
-        error: "Failed to fetch products",
+        error: "Failed to fetch products", 
         details: error.message
       });
+    }
+  });
+
+  app.get("/api/subscriptions", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+
+    try {
+      const subscriptions = await db
+        .select({
+          subscription: {
+            id: userSubscriptions.id,
+            startDate: userSubscriptions.startDate,
+            endDate: userSubscriptions.endDate,
+            status: userSubscriptions.status
+          },
+          plan: {
+            id: subscriptionPlans.id,
+            name: subscriptionPlans.name,
+            tier: subscriptionPlans.tier,
+            features: subscriptionPlans.features
+          }
+        })
+        .from(userSubscriptions)
+        .innerJoin(subscriptionPlans, eq(subscriptionPlans.id, userSubscriptions.planId))
+        .where(
+          and(
+            eq(userSubscriptions.userId, req.user.id),
+            eq(userSubscriptions.status, "active")
+          )
+        )
+        .orderBy(desc(userSubscriptions.startDate));
+
+      res.json(subscriptions);
+    } catch (error: any) {
+      console.error("Error fetching user subscriptions:", error);
+      res.status(500).send(error.message);
     }
   });
 
