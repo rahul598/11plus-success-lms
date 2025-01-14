@@ -57,6 +57,17 @@ export const studentProgress = pgTable("student_progress", {
   lastUpdated: timestamp("last_updated").defaultNow().notNull(),
 });
 
+export const media = pgTable("media", {
+  id: serial("id").primaryKey(),
+  url: text("url").notNull(),
+  filename: text("filename").notNull(),
+  category: text("category", { 
+    enum: ["Mathematics", "Science", "Chemistry", "Reasoning"] 
+  }).notNull(),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const insertUserSchema = createInsertSchema(users);
 export const selectUserSchema = createSelectSchema(users);
 export type InsertUser = typeof users.$inferInsert;
@@ -86,3 +97,8 @@ export const insertProgressSchema = createInsertSchema(studentProgress);
 export const selectProgressSchema = createSelectSchema(studentProgress);
 export type InsertProgress = typeof studentProgress.$inferInsert;
 export type SelectProgress = typeof studentProgress.$inferSelect;
+
+export const insertMediaSchema = createInsertSchema(media);
+export const selectMediaSchema = createSelectSchema(media);
+export type InsertMedia = typeof media.$inferInsert;
+export type SelectMedia = typeof media.$inferSelect;

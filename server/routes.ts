@@ -2,7 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { db } from "@db";
-import { users, questions, courses, tutors, payments, studentProgress } from "@db/schema";
+import { users, questions, courses, tutors, payments, studentProgress, media } from "@db/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
 import multer from "multer";
 import { parse } from "csv-parse";
@@ -11,6 +11,15 @@ import { Readable } from "stream";
 
 // Configure multer for file uploads
 const upload = multer({ storage: multer.memoryStorage() });
+
+// Extend Express Request type to include file from multer
+declare global {
+  namespace Express {
+    interface Request {
+      file?: Express.Multer.File
+    }
+  }
+}
 
 function requireAuth(req: Request, res: Response, next: Function) {
   if (req.isAuthenticated()) {
@@ -557,6 +566,66 @@ export function registerRoutes(app: Express): Server {
     } catch (error: any) {
       res.status(500).send(error.message);
     }
+  });
+
+  // Media Management Routes
+  app.get("/api/media", requireAuth, async (_req, res) => {
+    const allMedia = await db.select().from(media).orderBy(desc(media.createdAt));
+    res.json(allMedia);
+  });
+
+  app.post("/api/media/upload", requireAuth, upload.single("file"), async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+
+    if (!req.file) {
+      return res.status(400).send("No file uploaded");
+    }
+
+    try {
+      // Here you would typically:
+      // 1. Upload the file to a storage service (e.g., S3, Cloudinary)
+      // 2. Get the URL from the storage service
+      // For now, we'll use a placeholder URL
+      const url = `/uploads/${req.file.originalname}`;
+
+      const [mediaFile] = await db
+        .insert(media)
+        .values({
+          url,
+          filename: req.file.originalname,
+          category: req.body.category as "Mathematics" | "Science" | "Chemistry" | "Reasoning",
+          createdBy: req.user.id,
+        })
+        .returning();
+
+      res.json(mediaFile);
+    } catch (error: any) {
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.delete("/api/media/:id", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+
+    const mediaId = parseInt(req.params.id);
+    if (isNaN(mediaId)) {
+      return res.status(400).send("Invalid media ID");
+    }
+
+    const [deletedMedia] = await db
+      .delete(media)
+      .where(eq(media.id, mediaId))
+      .returning();
+
+    if (!deletedMedia) {
+      return res.status(404).send("Media not found");
+    }
+
+    res.json({ message: "Media deleted successfully" });
   });
 
   const httpServer = createServer(app);
