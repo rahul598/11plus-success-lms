@@ -4,6 +4,7 @@ import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { useUser } from "@/hooks/use-user";
 import { Loader2 } from "lucide-react";
+import { SocketProvider } from "@/providers/socket-provider";
 import AuthPage from "@/pages/auth-page";
 import NotFound from "@/pages/not-found";
 import { DashboardLayout } from "@/components/dashboard/layout";
@@ -58,8 +59,10 @@ function Router() {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Router />
-      <Toaster />
+      <SocketProvider>
+        <Router />
+        <Toaster />
+      </SocketProvider>
     </QueryClientProvider>
   );
 }

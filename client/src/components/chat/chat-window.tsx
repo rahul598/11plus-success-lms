@@ -5,11 +5,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MessageCircle, X } from "lucide-react";
+import { MessageCircle, X, UserPlus } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Message {
   message: string;
   from: string;
+  to?: string;
   timestamp: string;
 }
 
@@ -21,6 +29,7 @@ export function ChatWindow({ onClose }: ChatWindowProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [socket, setSocket] = useState<Socket | null>(null);
+  const [selectedUser, setSelectedUser] = useState<string>("");
   const { user } = useUser();
 
   useEffect(() => {
@@ -36,7 +45,7 @@ export function ChatWindow({ onClose }: ChatWindowProps) {
     });
 
     newSocket.on("notification", (data) => {
-      // Handle notifications here
+      // Handle notifications if needed
       console.log("Notification:", data);
     });
 
@@ -47,10 +56,13 @@ export function ChatWindow({ onClose }: ChatWindowProps) {
 
   const sendMessage = () => {
     if (inputMessage.trim() && socket) {
-      socket.emit("sendMessage", inputMessage);
+      socket.emit("sendMessage", inputMessage, selectedUser || undefined);
       setInputMessage("");
     }
   };
+
+  const isPrivateMessage = (msg: Message) => 
+    msg.to && (msg.to === user?.id.toString() || msg.from === user?.username);
 
   return (
     <Card className="fixed bottom-4 right-4 w-80 h-96 shadow-lg">
@@ -58,10 +70,22 @@ export function ChatWindow({ onClose }: ChatWindowProps) {
         <div className="flex items-center gap-2">
           <MessageCircle className="h-4 w-4" />
           <h3 className="font-semibold">Chat</h3>
+          {selectedUser && <span className="text-xs text-muted-foreground">(Private)</span>}
         </div>
-        <Button variant="ghost" size="icon" onClick={onClose}>
-          <X className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Select value={selectedUser} onValueChange={setSelectedUser}>
+            <SelectTrigger className="w-[100px]">
+              <SelectValue placeholder="Everyone" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Everyone</SelectItem>
+              {/* Add online users here */}
+            </SelectContent>
+          </Select>
+          <Button variant="ghost" size="icon" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="p-4">
         <ScrollArea className="h-52">
@@ -78,12 +102,15 @@ export function ChatWindow({ onClose }: ChatWindowProps) {
                     msg.from === user?.username
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted"
-                  }`}
+                  } ${isPrivateMessage(msg) ? "border-2 border-primary/20" : ""}`}
                 >
                   <p className="text-sm">{msg.message}</p>
                 </div>
                 <span className="text-xs text-muted-foreground mt-1">
                   {msg.from} • {new Date(msg.timestamp).toLocaleTimeString()}
+                  {isPrivateMessage(msg) && 
+                    <span className="ml-1">(Private)</span>
+                  }
                 </span>
               </div>
             ))}
@@ -101,7 +128,7 @@ export function ChatWindow({ onClose }: ChatWindowProps) {
           <Input
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
-            placeholder="Type a message..."
+            placeholder={`Message ${selectedUser ? 'privately' : 'everyone'}...`}
             className="flex-1"
           />
           <Button type="submit" size="icon">
