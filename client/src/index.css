@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Rowdies:wght@300;400;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -9,5 +11,50 @@
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
   }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Rowdies', sans-serif; /* Corrected font-family for headings */
+  }
+}
+
+.bg-sidebar {
+  background-color: #00aa9b;
+}
+
+.text-sidebar-foreground {
+  @apply text-white;
+}
+
+.bg-sidebar-accent {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.text-sidebar-accent-foreground {
+  @apply text-white;
+}
+
+.stats-card {
+  @apply bg-white rounded-lg shadow-sm p-6;
+}
+
+.stats-value {
+  @apply text-3xl font-bold text-gray-900;
+}
+
+.stats-label {
+  @apply text-sm text-gray-600;
+}
+
+.stats-trend {
+  @apply text-xs font-medium;
+}
+
+.stats-trend-up {
+  @apply text-emerald-600;
+}
+
+.stats-trend-down {
+  @apply text-red-600;
 }
