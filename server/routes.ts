@@ -1133,22 +1133,9 @@ export function registerRoutes(app: Express): Server {
   app.get("/api/subscription-plans", requireAuth, async (_req, res) => {
     try {
       const allPlans = await db
-        .select({
-          id: subscriptionPlans.id,
-          name: subscriptionPlans.name,
-          description: subscriptionPlans.description,
-          tier: subscriptionPlans.tier,
-          duration: subscriptionPlans.duration,
-          price: subscriptionPlans.price,
-          features: subscriptionPlans.features,
-          maxMockTests: subscriptionPlans.maxMockTests,
-          isActive: subscriptionPlans.isActive,
-          createdAt: subscriptionPlans.createdAt,
-          updatedAt: subscriptionPlans.updatedAt,
-        })
+        .select()
         .from(subscriptionPlans)
-        .orderBy(subscriptionPlans.tier);
-
+        .orderBy(desc(subscriptionPlans.createdAt));
       res.json(allPlans);
     } catch (error: any) {
       console.error("Error fetching subscription plans:", error);
@@ -1156,11 +1143,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.post("/api/subscription-plans", requireAuth, requireAdmin, async (req: Request & { user?: Express.User }, res) => {
-    if (!req.user) {
-      return res.status(401).send("Unauthorized");
-    }
-
+  app.post("/api/subscription-plans", requireAdmin, async (req, res) => {
     try {
       const [plan] = await db
         .insert(subscriptionPlans)
@@ -1171,10 +1154,9 @@ export function registerRoutes(app: Express): Server {
           duration: req.body.duration,
           price: req.body.price,
           features: req.body.features,
-          maxMockTests: req.body.maxMockTests,
+          isActive: true,
         })
         .returning();
-
       res.json(plan);
     } catch (error: any) {
       console.error("Error creating subscription plan:", error);
@@ -1182,14 +1164,10 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.put("/api/subscription-plans/:id", requireAuth, requireAdmin, async (req: Request & { user?: Express.User }, res) => {
-    if (!req.user) {
-      return res.status(401).send("Unauthorized");
-    }
-
+  app.put("/api/subscription-plans/:id", requireAdmin, async (req, res) => {
     try {
       const planId = parseInt(req.params.id);
-      const [plan] = await db
+      const [updatedPlan] = await db
         .update(subscriptionPlans)
         .set({
           name: req.body.name,
@@ -1198,43 +1176,516 @@ export function registerRoutes(app: Express): Server {
           duration: req.body.duration,
           price: req.body.price,
           features: req.body.features,
-          maxMockTests: req.body.maxMockTests,
-          isActive: req.body.isActive,
-          updatedAt: new Date(),
+          isActive: req.body.isActive !== undefined ? req.body.isActive : true,
         })
         .where(eq(subscriptionPlans.id, planId))
         .returning();
-
-      if (!plan) {
-        return res.status(404).send("Subscription plan not found");
-      }
-
-      res.json(plan);
+      res.json(updatedPlan);
     } catch (error: any) {
       console.error("Error updating subscription plan:", error);
       res.status(500).send(error.message);
     }
   });
 
-  app.delete("/api/subscription-plans/:id", requireAuth, requireAdmin, async (req: Request & { user?: Express.User }, res) => {
+  // User Subscription Routes
+  app.get("/api/subscriptions", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+    try {
+      const userSubscriptions = await db
+        .select({
+          subscription: userSubscriptions,
+          plan: {
+            id: subscriptionPlans.id,
+            name: subscriptionPlans.name,
+            tier: subscriptionPlans.tier,
+            features: subscriptionPlans.features,
+          },
+        })
+        .from(userSubscriptions)
+        .innerJoin(subscriptionPlans, eq(subscriptionPlans.id, userSubscriptions.planId))
+        .where(eq(userSubscriptions.userId, req.user.id))
+        .orderBy(desc(userSubscriptions.startDate));
+      res.json(userSubscriptions);
+    } catch (error: any) {
+      console.error("Error fetching user subscriptions:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  // Function to check subscription access
+  async function checkSubscriptionAccess(userId: number, feature: string): Promise<boolean> {
+    const [activeSubscription] = await db
+      .select({
+        subscription: userSubscriptions,
+        plan: subscriptionPlans,
+      })
+      .from(userSubscriptions)
+      .innerJoin(subscriptionPlans, eq(subscriptionPlans.id, userSubscriptions.planId))
+      .where(
+        and(
+          eq(userSubscriptions.userId, userId),
+          eq(userSubscriptions.status, "active")
+        )
+      )
+      .orderBy(desc(userSubscriptions.startDate))
+      .limit(1);
+
+    if (!activeSubscription) {
+      return false;
+    }
+
+    const features = activeSubscription.plan.features as Record<string, any>;
+    return features[feature]?.enabled || false;
+  }
+
+  // Question Categories
+  app.get("/api/questions/categories", requireAuth, async (_req, res) => {
+    try {
+      const categories = await db
+        .select()
+        .from(questionCategories)
+        .orderBy(questionCategories.name);
+      res.json(categories);
+    } catch (error: any) {
+      console.error("Error fetching question categories:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.post("/api/questions/categories", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const [category] = await db
+        .insert(questionCategories)
+        .values({
+          name: req.body.name,
+          description: req.body.description,
+          parentId: req.body.parentId,
+        })
+        .returning();
+      res.json(category);
+    } catch (error: any) {
+      console.error("Error creating question category:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.put("/api/questions/categories/:id", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const categoryId = parseInt(req.params.id);
+      const [category] = await db
+        .update(questionCategories)
+        .set({
+          name: req.body.name,
+          description: req.body.description,
+          parentId: req.body.parentId,
+        })
+        .where(eq(questionCategories.id, categoryId))
+        .returning();
+      res.json(category);
+    } catch (error: any) {
+      console.error("Error updating question category:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  // Add these routes after the question categories routes
+  app.get("/api/quizzes", requireAuth, async (_req, res) => {
+    try {
+      const allQuizzes = await db
+        .select({
+          quiz: quizzes,
+          category: questionCategories,
+          createdBy: users,
+        })
+        .from(quizzes)
+        .leftJoin(questionCategories, eq(quizzes.categoryId, questionCategories.id))
+        .leftJoin(users, eq(quizzes.createdBy, users.id))
+        .orderBy(desc(quizzes.createdAt));
+      res.json(allQuizzes);
+    } catch (error: any) {
+      console.error("Error fetching quizzes:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.post("/api/quizzes", requireAuth, async (req: Request & { user?: Express.User }, res) => {
     if (!req.user) {
       return res.status(401).send("Unauthorized");
     }
 
     try {
-      const planId = parseInt(req.params.id);
-      const [plan] = await db
-        .delete(subscriptionPlans)
-        .where(eq(subscriptionPlans.id, planId))
+      const [quiz] = await db
+        .insert(quizzes)
+        .values({
+          title: req.body.title,
+          description: req.body.description,
+          categoryId: req.body.categoryId,
+          difficulty: req.body.difficulty,
+          timeLimit: req.body.timeLimit,
+          passingScore: req.body.passingScore,
+          createdBy: req.user.id,
+        })
         .returning();
 
-      if (!plan) {
-        return res.status(404).send("Subscription plan not found");
+      res.json(quiz);
+    } catch (error: any) {
+      console.error("Error creating quiz:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.put("/api/quizzes/:id", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+
+    try {
+      const quizId = parseInt(req.params.id);
+
+      // Check if user owns the quiz or is admin
+      const [existingQuiz] = await db
+        .select()
+        .from(quizzes)
+        .where(eq(quizzes.id, quizId))
+        .limit(1);
+
+      if (!existingQuiz || (existingQuiz.createdBy !== req.user.id && req.user.role !== 'admin')) {
+        return res.status(403).send("Not authorized to edit this quiz");
       }
 
-      res.json({ message: "Subscription plan deleted successfully" });
+      const [quiz] = await db
+        .update(quizzes)
+        .set({
+          title: req.body.title,
+          description: req.body.description,
+          categoryId: req.body.categoryId,
+          difficulty: req.body.difficulty,
+          timeLimit: req.body.timeLimit,
+          passingScore: req.body.passingScore,
+          lastModified: new Date(),
+        })
+        .where(eq(quizzes.id, quizId))
+        .returning();
+
+      res.json(quiz);
     } catch (error: any) {
-      console.error("Error deleting subscription plan:", error);
+      console.error("Error updating quiz:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.delete("/api/quizzes/:id", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+
+    try {
+      const quizId = parseInt(req.params.id);
+
+      // Check if user owns the quiz or is admin
+      const [existingQuiz] = await db
+        .select()
+        .from(quizzes)
+        .where(eq(quizzes.id, quizId))
+        .limit(1);
+
+      if (!existingQuiz || (existingQuiz.createdBy !== req.user.id && req.user.role !== 'admin')) {
+        return res.status(403).send("Not authorized to delete this quiz");
+      }
+
+      // First delete associated quiz questions
+      await db
+        .delete(quizQuestions)
+        .where(eq(quizQuestions.quizId, quizId));
+
+      // Then delete the quiz
+      await db
+        .delete(quizzes)
+        .where(eq(quizzes.id, quizId));
+
+      res.json({ message: "Quiz deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting quiz:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.get("/api/quizzes/:id/questions", requireAuth, async (req, res) => {
+    try {
+      const quizId = parseInt(req.params.id);
+      const quizQuestionsList = await db
+        .select({
+          id: quizQuestions.id,
+          question: questions,
+          orderNumber: quizQuestions.orderNumber,
+          marks: quizQuestions.marks,
+        })
+        .from(quizQuestions)
+        .innerJoin(questions, eq(questions.id, quizQuestions.questionId))
+        .where(eq(quizQuestions.quizId, quizId))
+        .orderBy(quizQuestions.orderNumber);
+
+      res.json(quizQuestionsList);
+    } catch (error: any) {
+      console.error("Error fetching quiz questions:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.post("/api/quizzes/:id/questions", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+
+    try {
+      const quizId = parseInt(req.params.id);
+
+      // Check if user owns the quiz or is admin
+      const [existingQuiz] = await db
+        .select()
+        .from(quizzes)
+        .where(eq(quizzes.id, quizId))
+        .limit(1);
+
+      if (!existingQuiz || (existingQuiz.createdBy !== req.user.id && req.user.role !== 'admin')) {
+        return res.status(403).send("Not authorized to add questions to this quiz");
+      }
+
+      const { questionIds, marks } = req.body;
+
+      const existingQuestions = await db
+        .select()
+        .from(quizQuestions)
+        .where(eq(quizQuestions.quizId, quizId));
+
+      const nextOrderNumber = existingQuestions.length;
+
+      const newQuestions = await Promise.all(
+        questionIds.map(async (questionId: number, index: number) => {
+          const [question] = await db
+            .insert(quizQuestions)
+            .values({
+              quizId,
+              questionId,
+              orderNumber: nextOrderNumber + index,
+              marks: marks[index] || 1,
+            })
+            .returning();
+          return question;
+        })
+      );
+
+      res.json(newQuestions);
+    } catch (error: any) {
+      console.error("Error adding quiz questions:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  // Subscription Plan Routes
+  app.get("/api/subscription-plans", requireAuth, async (_req, res) => {
+    try {
+      const allPlans = await db
+        .select()
+        .from(subscriptionPlans)
+        .orderBy(desc(subscriptionPlans.createdAt));
+      res.json(allPlans);
+    } catch (error: any) {
+      console.error("Error fetching subscription plans:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.post("/api/subscription-plans", requireAdmin, async (req, res) => {
+    try {
+      const [plan] = await db
+        .insert(subscriptionPlans)
+        .values({
+          name: req.body.name,
+          description: req.body.description,
+          tier: req.body.tier,
+          duration: req.body.duration,
+          price: req.body.price,
+          features: req.body.features,
+          isActive: true,
+        })
+        .returning();
+      res.json(plan);
+    } catch (error: any) {
+      console.error("Error creating subscription plan:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.put("/api/subscription-plans/:id", requireAdmin, async (req, res) => {
+    try {
+      const planId = parseInt(req.params.id);
+      const [updatedPlan] = await db
+        .update(subscriptionPlans)
+        .set({
+          name: req.body.name,
+          description: req.body.description,
+          tier: req.body.tier,
+          duration: req.body.duration,
+          price: req.body.price,
+          features: req.body.features,
+          isActive: req.body.isActive !== undefined ? req.body.isActive : true,
+        })
+        .where(eq(subscriptionPlans.id, planId))
+        .returning();
+      res.json(updatedPlan);
+    } catch (error: any) {
+      console.error("Error updating subscription plan:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  // User Subscription Routes
+  app.get("/api/subscriptions", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+    try {
+      const userSubscriptions = await db
+        .select({
+          subscription: userSubscriptions,
+          plan: {
+            id: subscriptionPlans.id,
+            name: subscriptionPlans.name,
+            tier: subscriptionPlans.tier,
+            features: subscriptionPlans.features,
+          },
+        })
+        .from(userSubscriptions)
+        .innerJoin(subscriptionPlans, eq(subscriptionPlans.id, userSubscriptions.planId))
+        .where(eq(userSubscriptions.userId, req.user.id))
+        .orderBy(desc(userSubscriptions.startDate));
+      res.json(userSubscriptions);
+    } catch (error: any) {
+      console.error("Error fetching user subscriptions:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  // Function to check subscription access
+  async function checkSubscriptionAccess(userId: number, feature: string): Promise<boolean> {
+    const [activeSubscription] = await db
+      .select({
+        subscription: userSubscriptions,
+        plan: subscriptionPlans,
+      })
+      .from(userSubscriptions)
+      .innerJoin(subscriptionPlans, eq(subscriptionPlans.id, userSubscriptions.planId))
+      .where(
+        and(
+          eq(userSubscriptions.userId, userId),
+          eq(userSubscriptions.status, "active")
+        )
+      )
+      .orderBy(desc(userSubscriptions.startDate))
+      .limit(1);
+
+    if (!activeSubscription) {
+      return false;
+    }
+
+    const features = activeSubscription.plan.features as Record<string, any>;
+    return features[feature]?.enabled || false;
+  }
+
+  // Product Routes
+  app.post("/api/products", requireAuth, requireAdmin, upload.single("file"), async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+
+    try {
+      const fileUrl = `/uploads/${req.file.filename}`;
+
+      const [product] = await db
+        .insert(products)
+        .values({
+          title: req.body.title,
+          description: req.body.description,
+          price: new Decimal(req.body.price).toString(), // Convert to string for storage
+          category: req.body.category,
+          fileUrl: fileUrl,
+          isActive: true,
+          createdBy: req.user.id
+        })
+        .returning();
+
+      res.json({
+        message: "Product created successfully",
+        product
+      });
+
+    } catch (error: any) {
+      console.error("Error creating product:", error);
+      return res.status(500).json({
+        error: "Failed to create product",
+        details: error.message
+      });
+    }
+  });
+
+  app.get("/api/products", requireAuth, async (_req, res) => {
+    try {
+      const allProducts = await db
+        .select()
+        .from(products)
+        .orderBy(desc(products.createdAt));
+
+      res.json(allProducts);
+    } catch (error: any) {
+      console.error("Error fetching products:", error);
+      res.status(500).json({
+        error: "Failed to fetch products",
+        details: error.message
+      });
+    }
+  });
+
+  app.get("/api/subscriptions", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+
+    try {
+      const subscriptions = await db
+        .select({
+          subscription: {
+            id: userSubscriptions.id,
+            startDate: userSubscriptions.startDate,
+            endDate: userSubscriptions.endDate,
+            status: userSubscriptions.status
+          },
+          plan: {
+            id: subscriptionPlans.id,
+            name: subscriptionPlans.name,
+            tier: subscriptionPlans.tier,
+            features: subscriptionPlans.features
+          }
+        })
+        .from(userSubscriptions)
+        .innerJoin(subscriptionPlans, eq(subscriptionPlans.id, userSubscriptions.planId))
+        .where(
+          and(
+            eq(userSubscriptions.userId, req.user.id),
+            eq(userSubscriptions.status, "active")
+          )
+        )
+        .orderBy(desc(userSubscriptions.startDate));
+
+      res.json(subscriptions);
+    } catch (error: any) {
+      console.error("Error fetching user subscriptions:", error);
       res.status(500).send(error.message);
     }
   });
@@ -1523,6 +1974,361 @@ export function registerRoutes(app: Express): Server {
       res.status(500).send(error.message);
     }
   });
+
+  // Question Categories
+  app.get("/api/questions/categories", requireAuth, async (_req, res) => {
+    try {
+      const categories = await db
+        .select()
+        .from(questionCategories)
+        .orderBy(questionCategories.name);
+      res.json(categories);
+    } catch (error: any) {
+      console.error("Error fetching question categories:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.post("/api/questions/categories", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const [category] = await db
+        .insert(questionCategories)
+        .values({
+          name: req.body.name,
+          description: req.body.description,
+          parentId: req.body.parentId,
+        })
+        .returning();
+      res.json(category);
+    } catch (error: any) {
+      console.error("Error creating question category:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.put("/api/questions/categories/:id", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const categoryId = parseInt(req.params.id);
+      const [category] = await db
+        .update(questionCategories)
+        .set({
+          name: req.body.name,
+          description: req.body.description,
+          parentId: req.body.parentId,
+        })
+        .where(eq(questionCategories.id, categoryId))
+        .returning();
+      res.json(category);
+    } catch (error: any) {
+      console.error("Error updating question category:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  // Add these routes after the question categories routes
+  app.get("/api/quizzes", requireAuth, async (_req, res) => {
+    try {
+      const allQuizzes = await db
+        .select({
+          quiz: quizzes,
+          category: questionCategories,
+          createdBy: users,
+        })
+        .from(quizzes)
+        .leftJoin(questionCategories, eq(quizzes.categoryId, questionCategories.id))
+        .leftJoin(users, eq(quizzes.createdBy, users.id))
+        .orderBy(desc(quizzes.createdAt));
+      res.json(allQuizzes);
+    } catch (error: any) {
+      console.error("Error fetching quizzes:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.post("/api/quizzes", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+
+    try {
+      const [quiz] = await db
+        .insert(quizzes)
+        .values({
+          title: req.body.title,
+          description: req.body.description,
+          categoryId: req.body.categoryId,
+          difficulty: req.body.difficulty,
+          timeLimit: req.body.timeLimit,
+          passingScore: req.body.passingScore,
+          createdBy: req.user.id,
+        })
+        .returning();
+
+      res.json(quiz);
+    } catch (error: any) {
+      console.error("Error creating quiz:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.put("/api/quizzes/:id", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+
+    try {
+      const quizId = parseInt(req.params.id);
+
+      // Check if user owns the quiz or is admin
+      const [existingQuiz] = await db
+        .select()
+        .from(quizzes)
+        .where(eq(quizzes.id, quizId))
+        .limit(1);
+
+      if (!existingQuiz || (existingQuiz.createdBy !== req.user.id && req.user.role !== 'admin')) {
+        return res.status(403).send("Not authorized to edit this quiz");
+      }
+
+      const [quiz] = await db
+        .update(quizzes)
+        .set({
+          title: req.body.title,
+          description: req.body.description,
+          categoryId: req.body.categoryId,
+          difficulty: req.body.difficulty,
+          timeLimit: req.body.timeLimit,
+          passingScore: req.body.passingScore,
+          lastModified: new Date(),
+        })
+        .where(eq(quizzes.id, quizId))
+        .returning();
+
+      res.json(quiz);
+    } catch (error: any) {
+      console.error("Error updating quiz:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.delete("/api/quizzes/:id", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+
+    try {
+      const quizId = parseInt(req.params.id);
+
+      // Check if user owns the quiz or is admin
+      const [existingQuiz] = await db
+        .select()
+        .from(quizzes)
+        .where(eq(quizzes.id, quizId))
+        .limit(1);
+
+      if (!existingQuiz || (existingQuiz.createdBy !== req.user.id && req.user.role !== 'admin')) {
+        return res.status(403).send("Not authorized to delete this quiz");
+      }
+
+      // First delete associated quiz questions
+      await db
+        .delete(quizQuestions)
+        .where(eq(quizQuestions.quizId, quizId));
+
+      // Then delete the quiz
+      await db
+        .delete(quizzes)
+        .where(eq(quizzes.id, quizId));
+
+      res.json({ message: "Quiz deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting quiz:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.get("/api/quizzes/:id/questions", requireAuth, async (req, res) => {
+    try {
+      const quizId = parseInt(req.params.id);
+      const quizQuestionsList = await db
+        .select({
+          id: quizQuestions.id,
+          question: questions,
+          orderNumber: quizQuestions.orderNumber,
+          marks: quizQuestions.marks,
+        })
+        .from(quizQuestions)
+        .innerJoin(questions, eq(questions.id, quizQuestions.questionId))
+        .where(eq(quizQuestions.quizId, quizId))
+        .orderBy(quizQuestions.orderNumber);
+
+      res.json(quizQuestionsList);
+    } catch (error: any) {
+      console.error("Error fetching quiz questions:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.post("/api/quizzes/:id/questions", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+
+    try {
+      const quizId = parseInt(req.params.id);
+
+      // Check if user owns the quiz or is admin
+      const [existingQuiz] = await db
+        .select()
+        .from(quizzes)
+        .where(eq(quizzes.id, quizId))
+        .limit(1);
+
+      if (!existingQuiz || (existingQuiz.createdBy !== req.user.id && req.user.role !== 'admin')) {
+        return res.status(403).send("Not authorized to add questions to this quiz");
+      }
+
+      const { questionIds, marks } = req.body;
+
+      const existingQuestions = await db
+        .select()
+        .from(quizQuestions)
+        .where(eq(quizQuestions.quizId, quizId));
+
+      const nextOrderNumber = existingQuestions.length;
+
+      const newQuestions = await Promise.all(
+        questionIds.map(async (questionId: number, index: number) => {
+          const [question] = await db
+            .insert(quizQuestions)
+            .values({
+              quizId,
+              questionId,
+              orderNumber: nextOrderNumber + index,
+              marks: marks[index] || 1,
+            })
+            .returning();
+          return question;
+        })
+      );
+
+      res.json(newQuestions);
+    } catch (error: any) {
+      console.error("Error adding quiz questions:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  // Subscription Plan Routes
+  app.get("/api/subscription-plans", requireAuth, async (_req, res) => {
+    try {
+      const allPlans = await db
+        .select()
+        .from(subscriptionPlans)
+        .orderBy(desc(subscriptionPlans.createdAt));
+      res.json(allPlans);
+    } catch (error: any) {
+      console.error("Error fetching subscription plans:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.post("/api/subscription-plans", requireAdmin, async (req, res) => {
+    try {
+      const [plan] = await db
+        .insert(subscriptionPlans)
+        .values({
+          name: req.body.name,
+          description: req.body.description,
+          tier: req.body.tier,
+          duration: req.body.duration,
+          price: req.body.price,
+          features: req.body.features,
+          isActive: true,
+        })
+        .returning();
+      res.json(plan);
+    } catch (error: any) {
+      console.error("Error creating subscription plan:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.put("/api/subscription-plans/:id", requireAdmin, async (req, res) => {
+    try {
+      const planId = parseInt(req.params.id);
+      const [updatedPlan] = await db
+        .update(subscriptionPlans)
+        .set({
+          name: req.body.name,
+          description: req.body.description,
+          tier: req.body.tier,
+          duration: req.body.duration,
+          price: req.body.price,
+          features: req.body.features,
+          isActive: req.body.isActive !== undefined ? req.body.isActive : true,
+        })
+        .where(eq(subscriptionPlans.id, planId))
+        .returning();
+      res.json(updatedPlan);
+    } catch (error: any) {
+      console.error("Error updating subscription plan:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  // User Subscription Routes
+  app.get("/api/subscriptions", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+    try {
+      const userSubscriptions = await db
+        .select({
+          subscription: userSubscriptions,
+          plan: {
+            id: subscriptionPlans.id,
+            name: subscriptionPlans.name,
+            tier: subscriptionPlans.tier,
+            features: subscriptionPlans.features,
+          },
+        })
+        .from(userSubscriptions)
+        .innerJoin(subscriptionPlans, eq(subscriptionPlans.id, userSubscriptions.planId))
+        .where(eq(userSubscriptions.userId, req.user.id))
+        .orderBy(desc(userSubscriptions.startDate));
+      res.json(userSubscriptions);
+    } catch (error: any) {
+      console.error("Error fetching user subscriptions:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  // Function to check subscription access
+  async function checkSubscriptionAccess(userId: number, feature: string): Promise<boolean> {
+    const [activeSubscription] = await db
+      .select({
+        subscription: userSubscriptions,
+        plan: subscriptionPlans,
+      })
+      .from(userSubscriptions)
+      .innerJoin(subscriptionPlans, eq(subscriptionPlans.id, userSubscriptions.planId))
+      .where(
+        and(
+          eq(userSubscriptions.userId, userId),
+          eq(userSubscriptions.status, "active")
+        )
+      )
+      .orderBy(desc(userSubscriptions.startDate))
+      .limit(1);
+
+    if (!activeSubscription) {
+      return false;
+    }
+
+    const features = activeSubscription.plan.features as Record<string, any>;
+    return features[feature]?.enabled || false;
+  }
 
   // Product Routes
   app.post("/api/products", requireAuth, requireAdmin, upload.single("file"), async (req: Request & { user?: Express.User }, res) => {
@@ -1863,24 +2669,100 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  const httpServer = createServer(app);
-  return httpServer;
-}
+  // Subscription Plan Routes
+  app.get("/api/subscription-plans", requireAuth, async (_req, res) => {
+    try {
+      const allPlans = await db
+        .select()
+        .from(subscriptionPlans)
+        .orderBy(desc(subscriptionPlans.createdAt));
+      res.json(allPlans);
+    } catch (error: any) {
+      console.error("Error fetching subscription plans:", error);
+      res.status(500).send(error.message);
+    }
+  });
 
-async function checkSubscriptionAccess(userId: number, feature: string): Promise<boolean> {
-  try {
-    const [subscription] = await db
+  app.post("/api/subscription-plans", requireAdmin, async (req, res) => {
+    try {
+      const [plan] = await db
+        .insert(subscriptionPlans)
+        .values({
+          name: req.body.name,
+          description: req.body.description,
+          tier: req.body.tier,
+          duration: req.body.duration,
+          price: req.body.price,
+          features: req.body.features,
+          isActive: true,
+        })
+        .returning();
+      res.json(plan);
+    } catch (error: any) {
+      console.error("Error creating subscription plan:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.put("/api/subscription-plans/:id", requireAdmin, async (req, res) => {
+    try {
+      const planId = parseInt(req.params.id);
+      const [updatedPlan] = await db
+        .update(subscriptionPlans)
+        .set({
+          name: req.body.name,
+          description: req.body.description,
+          tier: req.body.tier,
+          duration: req.body.duration,
+          price: req.body.price,
+          features: req.body.features,
+          isActive: req.body.isActive !== undefined ? req.body.isActive : true,
+        })
+        .where(eq(subscriptionPlans.id, planId))
+        .returning();
+      res.json(updatedPlan);
+    } catch (error: any) {
+      console.error("Error updating subscription plan:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  // User Subscription Routes
+  app.get("/api/subscriptions", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+    try {
+      const userSubscriptions = await db
+        .select({
+          subscription: userSubscriptions,
+          plan: {
+            id: subscriptionPlans.id,
+            name: subscriptionPlans.name,
+            tier: subscriptionPlans.tier,
+            features: subscriptionPlans.features,
+          },
+        })
+        .from(userSubscriptions)
+        .innerJoin(subscriptionPlans, eq(subscriptionPlans.id, userSubscriptions.planId))
+        .where(eq(userSubscriptions.userId, req.user.id))
+        .orderBy(desc(userSubscriptions.startDate));
+      res.json(userSubscriptions);
+    } catch (error: any) {
+      console.error("Error fetching user subscriptions:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  // Function to check subscription access
+  async function checkSubscriptionAccess(userId: number, feature: string): Promise<boolean> {
+    const [activeSubscription] = await db
       .select({
         subscription: userSubscriptions,
-        plan: {
-          features: subscriptionPlans.features
-        }
+        plan: subscriptionPlans,
       })
       .from(userSubscriptions)
-      .innerJoin(
-        subscriptionPlans,
-        eq(subscriptionPlans.id, userSubscriptions.planId)
-      )
+      .innerJoin(subscriptionPlans, eq(subscriptionPlans.id, userSubscriptions.planId))
       .where(
         and(
           eq(userSubscriptions.userId, userId),
@@ -1890,16 +2772,14 @@ async function checkSubscriptionAccess(userId: number, feature: string): Promise
       .orderBy(desc(userSubscriptions.startDate))
       .limit(1);
 
-    // If user has no active subscription
-    if (!subscription) {
+    if (!activeSubscription) {
       return false;
     }
 
-    // Check if feature is enabled in the plan
-    const planFeatures = subscription.plan.features as Record<string, { enabled: boolean; limit?: number }>;
-    return planFeatures[feature]?.enabled ?? false;
-  } catch (error) {
-    console.error("Error checking subscription access:", error);
-    return false;
+    const features = activeSubscription.plan.features as Record<string, any>;
+    return features[feature]?.enabled || false;
   }
+
+  const httpServer = createServer(app);
+  return httpServer;
 }
