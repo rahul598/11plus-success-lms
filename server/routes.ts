@@ -994,8 +994,7 @@ export function registerRoutes(app: Express): Server {
       await db.insert(notifications).values({
         userId: session.userId,
         title: "Mock Test Results Available",
-        content: `Your mock test results are ready. Score: ${totalScore}/${answers.length}`,
-        type: "result",
+        content: `Your mock test results are ready. Score: ${totalScore}/${answers.length}`,        type: "result",
       });
 
       res.json({
@@ -1106,34 +1105,20 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Subscription Plan Routes
-  app.get("/api/subscription-plans", async (_req, res) => {
+  app.get("/api/subscription-plans", requireAuth, async (_req, res) => {
     try {
       const plans = await db
         .select()
         .from(subscriptionPlans)
-        .where(eq(subscriptionPlans.isActive, true))
-        .orderBy(subscriptionPlans.price);
+        .orderBy(subscriptionPlans.tier);
+
       res.json(plans);
     } catch (error: any) {
       console.error("Error fetching subscription plans:", error);
-      res.status(500).send(error.message);
+      res.status(500).json({ error: error.message });
     }
   });
 
-  app.post("/api/subscription-plans", requireAdmin, async (req, res) => {
-    try {
-      const [plan] = await db
-        .insert(subscriptionPlans)
-        .values(req.body)
-        .returning();
-      res.json(plan);
-    } catch (error: any) {
-      console.error("Error creating subscription plan:", error);
-      res.status(500).send(error.message);
-    }
-  });
-
-  // User Subscription Routes
   app.get("/api/subscriptions", requireAuth, async (req: Request & { user?: Express.User }, res) => {
     if (!req.user) {
       return res.status(401).send("Unauthorized");
@@ -1142,12 +1127,18 @@ export function registerRoutes(app: Express): Server {
     try {
       const subscriptions = await db
         .select({
-          subscription: userSubscriptions,
+          subscription: {
+            id: userSubscriptions.id,
+            startDate: userSubscriptions.startDate,
+            endDate: userSubscriptions.endDate,
+            status: userSubscriptions.status
+          },
           plan: {
             id: subscriptionPlans.id,
             name: subscriptionPlans.name,
-            features: subscriptionPlans.features,
-          },
+            tier: subscriptionPlans.tier,
+            features: subscriptionPlans.features
+          }
         })
         .from(userSubscriptions)
         .innerJoin(subscriptionPlans, eq(subscriptionPlans.id, userSubscriptions.planId))
@@ -1156,77 +1147,12 @@ export function registerRoutes(app: Express): Server {
             eq(userSubscriptions.userId, req.user.id),
             eq(userSubscriptions.status, "active")
           )
-        );
+        )
+        .orderBy(desc(userSubscriptions.startDate));
 
       res.json(subscriptions);
     } catch (error: any) {
       console.error("Error fetching user subscriptions:", error);
-      res.status(500).send(error.message);
-    }
-  });
-
-  app.post("/api/subscriptions/purchase", requireAuth, async (req: Request & { user?: Express.User }, res) => {
-    if (!req.user) {
-      return res.status(401).send("Unauthorized");
-    }
-
-    try {
-      const { planId } = req.body;
-      const [plan] = await db
-        .select()
-        .from(subscriptionPlans)
-        .where(
-          and(
-            eq(subscriptionPlans.id, planId),
-            eq(subscriptionPlans.isActive, true)
-          )
-        )
-        .limit(1);
-
-      if (!plan) {
-        return res.status(404).send("Subscription plan not found");
-      }
-
-      // Create payment record
-      const [payment] = await db
-        .insert(payments)
-        .values({
-          userId: req.user.id,
-          amount: plan.price,
-          status: "pending",
-          type: "subscription",
-        })
-        .returning();
-
-      const startDate = new Date();
-      const endDate = new Date();
-      endDate.setDate(endDate.getDate() + plan.duration);
-
-      // Create subscription
-      const [subscription] = await db
-        .insert(userSubscriptions)
-        .values({
-          userId: req.user.id,
-          planId: plan.id,
-          startDate,
-          endDate,
-          paymentId: payment.id,
-        })
-        .returning();
-
-      // Add notification
-      await db
-        .insert(notifications)
-        .values({
-          userId: req.user.id,
-          title: "New Subscription Activated",
-          content: `Your ${plan.name} subscription has been activated and is valid until ${endDate.toLocaleDateString()}`,
-          type: "system",
-        });
-
-      res.json({ subscription, payment });
-    } catch (error: any) {
-      console.error("Error purchasing subscription:", error);
       res.status(500).send(error.message);
     }
   });
