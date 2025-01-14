@@ -511,3 +511,36 @@ export const insertUserSubscriptionSchema = createInsertSchema(userSubscriptions
 export const selectUserSubscriptionSchema = createSelectSchema(userSubscriptions);
 export type InsertUserSubscription = typeof userSubscriptions.$inferInsert;
 export type SelectUserSubscription = typeof userSubscriptions.$inferSelect;
+
+export const quizzes = pgTable("quizzes", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description"),
+  categoryId: integer("category_id").references(() => questionCategories.id),
+  difficulty: text("difficulty", { enum: ["easy", "medium", "hard"] }).notNull(),
+  timeLimit: integer("time_limit").notNull(), // in minutes
+  passingScore: integer("passing_score").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const quizQuestions = pgTable("quiz_questions", {
+  id: serial("id").primaryKey(),
+  quizId: integer("quiz_id").references(() => quizzes.id).notNull(),
+  questionId: integer("question_id").references(() => questions.id).notNull(),
+  orderNumber: integer("order_number").notNull(),
+  marks: integer("marks").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertQuizSchema = createInsertSchema(quizzes);
+export const selectQuizSchema = createSelectSchema(quizzes);
+export type InsertQuiz = typeof quizzes.$inferInsert;
+export type SelectQuiz = typeof quizzes.$inferSelect;
+
+export const insertQuizQuestionSchema = createInsertSchema(quizQuestions);
+export const selectQuizQuestionSchema = createSelectSchema(quizQuestions);
+export type InsertQuizQuestion = typeof quizQuestions.$inferInsert;
+export type SelectQuizQuestion = typeof quizQuestions.$inferSelect;

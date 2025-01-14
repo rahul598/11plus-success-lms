@@ -25,6 +25,8 @@ import {
   userSubscriptions,
   products,
   questionCategories,
+  quizzes,
+  quizQuestions
 } from "@db/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
 import multer from "multer";
@@ -992,10 +994,12 @@ export function registerRoutes(app: Express): Server {
           const [updatedAnswer] = await db
             .update(mockTestAnswers)
             .set({
-              isCorrect,              feedback,
+              isCorrect,
+              feedback,
               confidenceLevel: calculateConfidenceLevel(answer.timeSpent),
               mistakeCategory: !isCorrect ? categorizeMistake(answer.selectedOption, question.correctAnswer) : null,
-            })            .where(eq(mockTestAnswers.id, answer.id))
+            })
+            .where(eq(mockTestAnswers.id, answer.id))
             .returning();
           return updatedAnswer;
         })
@@ -1139,7 +1143,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.post("/api/subscriptions/plans", requireAuth, requireAdmin, async (req: Request & { user?: Express.User }, res) => {
+  app.post("/api/subscription-plans", requireAuth, requireAdmin, async (req: Request & { user?: Express.User }, res) => {
     if (!req.user) {
       return res.status(401).send("Unauthorized");
     }
@@ -1591,6 +1595,122 @@ export function registerRoutes(app: Express): Server {
       res.json(category);
     } catch (error: any) {
       console.error("Error updating question category:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  // Add these routes after the question categories routes
+  app.get("/api/quizzes", requireAuth, async (_req, res) => {
+    try {
+      const allQuizzes = await db
+        .select()
+        .from(quizzes)
+        .orderBy(desc(quizzes.createdAt));
+      res.json(allQuizzes);
+    } catch (error: any) {
+      console.error("Error fetching quizzes:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.post("/api/quizzes", requireAuth, requireAdmin, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+
+    try {
+      const [quiz] = await db
+        .insert(quizzes)
+        .values({
+          ...req.body,
+          createdBy: req.user.id,
+        })
+        .returning();
+
+      res.json(quiz);
+    } catch (error: any) {
+      console.error("Error creating quiz:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.put("/api/quizzes/:id", requireAuth, requireAdmin, async (req: Request & { user?: Express.User }, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+
+    try {
+      const quizId = parseInt(req.params.id);
+      const [quiz] = await db
+        .update(quizzes)
+        .set({
+          title: req.body.title,
+          description: req.body.description,
+          categoryId: req.body.categoryId,
+          difficulty: req.body.difficulty,
+          timeLimit: req.body.timeLimit,
+          passingScore: req.body.passingScore,
+        })
+        .where(eq(quizzes.id, quizId))
+        .returning();
+
+      res.json(quiz);
+    } catch (error: any) {
+      console.error("Error updating quiz:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.get("/api/quizzes/:id/questions", requireAuth, async (req, res) => {
+    try {
+      const quizId = parseInt(req.params.id);
+      const quizQuestionsList = await db
+        .select({
+          quizQuestion: quizQuestions,
+          question: questions,
+        })
+        .from(quizQuestions)
+        .innerJoin(questions, eq(questions.id, quizQuestions.questionId))
+        .where(eq(quizQuestions.quizId, quizId))
+        .orderBy(quizQuestions.orderNumber);
+
+      res.json(quizQuestionsList);
+    } catch (error: any) {
+      console.error("Error fetching quiz questions:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.post("/api/quizzes/:id/questions", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const quizId = parseInt(req.params.id);
+      const { questionIds, marks } = req.body;
+
+      const existingQuestions = await db
+        .select()
+        .from(quizQuestions)
+        .where(eq(quizQuestions.quizId, quizId));
+
+      const nextOrderNumber = existingQuestions.length;
+
+      const newQuestions = await Promise.all(
+        questionIds.map(async (questionId: number, index: number) => {
+          const [question] = await db
+            .insert(quizQuestions)
+            .values({
+              quizId,
+              questionId,
+              orderNumber: nextOrderNumber + index,
+              marks: marks[index] || 1,
+            })
+            .returning();
+          return question;
+        })
+      );
+
+      res.json(newQuestions);
+    } catch (error: any) {
+      console.error("Error adding quiz questions:", error);
       res.status(500).send(error.message);
     }
   });
