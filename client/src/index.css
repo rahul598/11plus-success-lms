@@ -15,46 +15,36 @@
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Rowdies', sans-serif; /* Corrected font-family for headings */
+    font-family: 'Rowdies', cursive;
   }
 }
 
-.bg-sidebar {
-  background-color: #00aa9b;
+.bg-gradient-primary {
+  background: linear-gradient(180deg, #E6FAF8 0%, #FFFFFF 100%);
 }
 
-.text-sidebar-foreground {
-  @apply text-white;
+.text-gradient {
+  background: linear-gradient(90deg, #00AA9B 0%, #00D1BE 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
-.bg-sidebar-accent {
-  background-color: rgba(255, 255, 255, 0.1);
+.button-gradient {
+  background: linear-gradient(90deg, #00AA9B 0%, #00D1BE 100%);
 }
 
-.text-sidebar-accent-foreground {
-  @apply text-white;
+.button-gradient:hover {
+  background: linear-gradient(90deg, #009488 0%, #00BBA9 100%);
 }
 
 .stats-card {
-  @apply bg-white rounded-lg shadow-sm p-6;
+  @apply bg-white rounded-xl shadow-lg p-6;
 }
 
 .stats-value {
-  @apply text-3xl font-bold text-gray-900;
+  @apply text-4xl font-bold text-[#2D3648];
 }
 
 .stats-label {
-  @apply text-sm text-gray-600;
-}
-
-.stats-trend {
-  @apply text-xs font-medium;
-}
-
-.stats-trend-up {
-  @apply text-emerald-600;
-}
-
-.stats-trend-down {
-  @apply text-red-600;
+  @apply text-base text-[#545F71];
 }
