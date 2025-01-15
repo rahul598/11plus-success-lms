@@ -17,6 +17,7 @@ import * as z from "zod";
 import { Link } from "wouter";
 import { ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { FaGoogle, FaFacebook } from 'react-icons/fa';
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -52,7 +53,6 @@ export default function SignupPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       setIsLoading(true);
-      // TODO: Implement signup logic
       const response = await fetch("/api/register", {
         method: "POST",
         headers: {
@@ -82,6 +82,16 @@ export default function SignupPage() {
     }
   }
 
+  const handleGoogleSignup = () => {
+    // TODO: Implement Google signup
+    window.location.href = '/api/auth/google';
+  };
+
+  const handleFacebookSignup = () => {
+    // TODO: Implement Facebook signup
+    window.location.href = '/api/auth/facebook';
+  };
+
   return (
     <div className="min-h-screen bg-gradient-primary flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -97,6 +107,37 @@ export default function SignupPage() {
             <p className="text-[#545F71]">
               Join us to start your learning journey
             </p>
+          </div>
+
+          {/* Social Login Buttons */}
+          <div className="space-y-3">
+            <Button
+              type="button"
+              className="w-full bg-[#4285F4] hover:bg-[#357ABD] text-white flex items-center justify-center gap-2"
+              onClick={handleGoogleSignup}
+            >
+              <FaGoogle className="w-5 h-5" />
+              Continue with Google
+            </Button>
+            <Button
+              type="button"
+              className="w-full bg-[#1877F2] hover:bg-[#0C63D4] text-white flex items-center justify-center gap-2"
+              onClick={handleFacebookSignup}
+            >
+              <FaFacebook className="w-5 h-5" />
+              Continue with Facebook
+            </Button>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-muted-foreground">
+                  Or continue with
+                </span>
+              </div>
+            </div>
           </div>
 
           <Form {...form}>

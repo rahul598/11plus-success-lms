@@ -17,6 +17,7 @@ import * as z from "zod";
 import { Link } from "wouter";
 import { ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { FaGoogle, FaFacebook } from 'react-icons/fa';
 
 const formSchema = z.object({
   email: z.string().email({
@@ -43,7 +44,6 @@ export default function LoginPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       setIsLoading(true);
-      // TODO: Implement login logic
       const response = await fetch("/api/login", {
         method: "POST",
         headers: {
@@ -73,6 +73,16 @@ export default function LoginPage() {
     }
   }
 
+  const handleGoogleLogin = () => {
+    // TODO: Implement Google login
+    window.location.href = '/api/auth/google';
+  };
+
+  const handleFacebookLogin = () => {
+    // TODO: Implement Facebook login
+    window.location.href = '/api/auth/facebook';
+  };
+
   return (
     <div className="min-h-screen bg-gradient-primary flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -88,6 +98,37 @@ export default function LoginPage() {
             <p className="text-[#545F71]">
               Enter your credentials to access your account
             </p>
+          </div>
+
+          {/* Social Login Buttons */}
+          <div className="space-y-3">
+            <Button
+              type="button"
+              className="w-full bg-[#4285F4] hover:bg-[#357ABD] text-white flex items-center justify-center gap-2"
+              onClick={handleGoogleLogin}
+            >
+              <FaGoogle className="w-5 h-5" />
+              Continue with Google
+            </Button>
+            <Button
+              type="button"
+              className="w-full bg-[#1877F2] hover:bg-[#0C63D4] text-white flex items-center justify-center gap-2"
+              onClick={handleFacebookLogin}
+            >
+              <FaFacebook className="w-5 h-5" />
+              Continue with Facebook
+            </Button>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-muted-foreground">
+                  Or continue with
+                </span>
+              </div>
+            </div>
           </div>
 
           <Form {...form}>
