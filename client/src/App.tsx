@@ -25,6 +25,8 @@ import Media from "@/pages/dashboard/media";
 import LiveClasses from "@/pages/dashboard/classes/live";
 import RecordedClasses from "@/pages/dashboard/classes/recorded";
 import ClassSchedule from "@/pages/dashboard/classes/schedule";
+import Quizzes from "@/pages/dashboard/quizzes";
+import QuizQuestions from "@/pages/dashboard/quizzes/[id]/questions";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, isLoading } = useUser();
@@ -68,6 +70,8 @@ function Router() {
       <Route path="/dashboard/classes/live" component={() => <ProtectedRoute component={LiveClasses} />} />
       <Route path="/dashboard/classes/recorded" component={() => <ProtectedRoute component={RecordedClasses} />} />
       <Route path="/dashboard/classes/schedule" component={() => <ProtectedRoute component={ClassSchedule} />} />
+      <Route path="/dashboard/quizzes" component={() => <ProtectedRoute component={Quizzes} />} />
+      <Route path="/dashboard/quizzes/:id/questions" component={() => <ProtectedRoute component={QuizQuestions} />} />
       <Route path="/" component={() => <ProtectedRoute component={Dashboard} />} />
       <Route component={NotFound} />
     </Switch>
