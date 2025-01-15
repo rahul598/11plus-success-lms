@@ -8,8 +8,8 @@ import {
 } from "@/components/ui/card";
 import {
   Users,
-  GraduationCap,
   BookOpen,
+  GraduationCap,
   CreditCard,
 } from "lucide-react";
 
@@ -32,50 +32,66 @@ export default function AdminDashboard() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Total Users
+                </CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats?.users || 0}</div>
+              <div className="text-2xl font-bold">
+                {stats?.users || 0}
+              </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium">Questions</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Questions Bank
+                </CardTitle>
                 <BookOpen className="h-4 w-4 text-muted-foreground" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats?.questions || 0}</div>
+              <div className="text-2xl font-bold">
+                {stats?.questions || 0}
+              </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium">Active Tutors</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Active Tutors
+                </CardTitle>
                 <GraduationCap className="h-4 w-4 text-muted-foreground" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats?.tutors || 0}</div>
+              <div className="text-2xl font-bold">
+                {stats?.tutors || 0}
+              </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Total Revenue
+                </CardTitle>
                 <CreditCard className="h-4 w-4 text-muted-foreground" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${stats?.revenue || 0}</div>
+              <div className="text-2xl font-bold">
+                ${stats?.revenue || 0}
+              </div>
             </CardContent>
           </Card>
         </div>
