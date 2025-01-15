@@ -42,9 +42,9 @@ export default function AdminDashboard() {
         <Tabs defaultValue="overview" className="space-y-4">
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            <TabsTrigger value="reports">Reports</TabsTrigger>
-            <TabsTrigger value="notifications">Notifications</TabsTrigger>
+            <TabsTrigger value="analytics" className="hidden md:inline-flex">Analytics</TabsTrigger>
+            <TabsTrigger value="reports" className="hidden md:inline-flex">Reports</TabsTrigger>
+            <TabsTrigger value="notifications" className="hidden md:inline-flex">Notifications</TabsTrigger>
           </TabsList>
           <TabsContent value="overview" className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

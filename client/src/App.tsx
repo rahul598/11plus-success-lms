@@ -20,6 +20,13 @@ import AdminDashboard from "@/pages/dashboard/admin";
 import AdminAnalyticsPage from "@/pages/dashboard/admin/analytics";
 import AdminReportsPage from "@/pages/dashboard/admin/reports";
 import AdminUsersPage from "@/pages/dashboard/admin/users";
+import AdminProductsPage from "@/pages/dashboard/admin/products";
+import AdminSubscriptionsPage from "@/pages/dashboard/admin/subscriptions";
+import AdminPaymentsPage from "@/pages/dashboard/admin/payments";
+import AdminTutorsPage from "@/pages/dashboard/admin/tutors";
+import AdminCoursesPage from "@/pages/dashboard/admin/courses";
+import AdminMockTestsPage from "@/pages/dashboard/admin/mock-tests";
+import AdminSettingsPage from "@/pages/dashboard/admin/settings";
 import { useUser } from "@/hooks/use-user";
 import { useEffect } from "react";
 import { useLocation } from "wouter";
@@ -101,6 +108,13 @@ function Router() {
                   <Route path="/dashboard/admin/analytics" component={AdminAnalyticsPage} />
                   <Route path="/dashboard/admin/reports" component={AdminReportsPage} />
                   <Route path="/dashboard/admin/users" component={AdminUsersPage} />
+                  <Route path="/dashboard/admin/products" component={AdminProductsPage} />
+                  <Route path="/dashboard/admin/subscriptions" component={AdminSubscriptionsPage} />
+                  <Route path="/dashboard/admin/payments" component={AdminPaymentsPage} />
+                  <Route path="/dashboard/admin/tutors" component={AdminTutorsPage} />
+                  <Route path="/dashboard/admin/courses" component={AdminCoursesPage} />
+                  <Route path="/dashboard/admin/mock-tests" component={AdminMockTestsPage} />
+                  <Route path="/dashboard/admin/settings" component={AdminSettingsPage} />
                 </>
               )}
 
