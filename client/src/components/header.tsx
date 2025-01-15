@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Menu, X, User, LogOut, Home, ShoppingBag, Settings } from "lucide-react";
+import { Menu, X, User, LogOut } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useLocation } from "wouter";
 import {
@@ -79,21 +79,15 @@ export function Header() {
             </Link>
           </nav>
 
-          {/* Right side icons */}
+          {/* Right side icons and auth buttons */}
           <div className="flex items-center gap-4">
-            <Link href="/cart">
-              <Button variant="ghost" size="icon" className="w-10 h-10">
-                <img src="https://vinsonedge.com/wp-content/uploads/2025/01/Cart.png" alt="Cart" className="w-6 h-6" />
-              </Button>
-            </Link>
-
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                     <Avatar className="h-10 w-10">
                       <AvatarFallback className="bg-primary/10">
-                        {user.name?.[0] || user.username[0]}
+                        {user.username[0].toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                   </Button>
@@ -101,21 +95,9 @@ export function Header() {
                 <DropdownMenuContent className="w-56" align="end">
                   <DropdownMenuLabel>My Account</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => setLocation('/profile')}>
+                  <DropdownMenuItem onClick={() => setLocation('/dashboard')}>
                     <User className="mr-2 h-4 w-4" />
-                    Profile
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setLocation('/orders')}>
-                    <ShoppingBag className="mr-2 h-4 w-4" />
-                    Orders
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setLocation('/addresses')}>
-                    <Home className="mr-2 h-4 w-4" />
-                    Addresses
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setLocation('/settings')}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    Settings
+                    Dashboard
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout}>
@@ -145,6 +127,7 @@ export function Header() {
               </>
             )}
 
+            {/* Mobile menu button */}
             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
@@ -187,17 +170,8 @@ export function Header() {
                 </Link>
                 {user ? (
                   <>
-                    <Link href="/profile" onClick={() => setIsMenuOpen(false)} className="text-[#2D3648] hover:text-[#00AA9B] font-medium px-4">
-                      Profile
-                    </Link>
-                    <Link href="/orders" onClick={() => setIsMenuOpen(false)} className="text-[#2D3648] hover:text-[#00AA9B] font-medium px-4">
-                      Orders
-                    </Link>
-                    <Link href="/addresses" onClick={() => setIsMenuOpen(false)} className="text-[#2D3648] hover:text-[#00AA9B] font-medium px-4">
-                      Addresses
-                    </Link>
-                    <Link href="/settings" onClick={() => setIsMenuOpen(false)} className="text-[#2D3648] hover:text-[#00AA9B] font-medium px-4">
-                      Settings
+                    <Link href="/dashboard" onClick={() => setIsMenuOpen(false)} className="text-[#2D3648] hover:text-[#00AA9B] font-medium px-4">
+                      Dashboard
                     </Link>
                     <button
                       onClick={() => {
