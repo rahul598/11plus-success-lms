@@ -21,6 +21,10 @@ import ProductCategories from "@/pages/dashboard/products/categories";
 import ProductOrders from "@/pages/dashboard/products/orders";
 import Subscriptions from "@/pages/dashboard/subscriptions";
 import MySubscription from "@/pages/dashboard/my-subscription";
+import Media from "@/pages/dashboard/media";
+import LiveClasses from "@/pages/dashboard/classes/live";
+import RecordedClasses from "@/pages/dashboard/classes/recorded";
+import ClassSchedule from "@/pages/dashboard/classes/schedule";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, isLoading } = useUser();
@@ -60,6 +64,10 @@ function Router() {
       <Route path="/dashboard/products/orders" component={() => <ProtectedRoute component={ProductOrders} />} />
       <Route path="/dashboard/subscriptions" component={() => <ProtectedRoute component={Subscriptions} />} />
       <Route path="/dashboard/my-subscription" component={() => <ProtectedRoute component={MySubscription} />} />
+      <Route path="/dashboard/media" component={() => <ProtectedRoute component={Media} />} />
+      <Route path="/dashboard/classes/live" component={() => <ProtectedRoute component={LiveClasses} />} />
+      <Route path="/dashboard/classes/recorded" component={() => <ProtectedRoute component={RecordedClasses} />} />
+      <Route path="/dashboard/classes/schedule" component={() => <ProtectedRoute component={ClassSchedule} />} />
       <Route path="/" component={() => <ProtectedRoute component={Dashboard} />} />
       <Route component={NotFound} />
     </Switch>
