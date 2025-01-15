@@ -17,6 +17,7 @@ import CheckoutPage from "@/pages/checkout";
 import StudentDashboard from "@/pages/dashboard/student";
 import ParentDashboard from "@/pages/dashboard/parent";
 import TutorDashboard from "@/pages/dashboard/tutor";
+import AdminDashboard from "@/pages/dashboard/admin";
 import { useUser } from "@/hooks/use-user";
 
 // Parent Dashboard Pages
@@ -28,6 +29,11 @@ import ParentOrdersPage from "@/pages/dashboard/parent/orders";
 import ParentAddressesPage from "@/pages/dashboard/parent/addresses";
 import ParentSettingsPage from "@/pages/dashboard/parent/settings";
 
+// Admin Dashboard Pages
+import AdminUsersPage from "@/pages/dashboard/admin/users";
+import AdminReportsPage from "@/pages/dashboard/admin/reports";
+import AdminAnalyticsPage from "@/pages/dashboard/admin/analytics";
+
 function getDashboardRoute(role?: string) {
   switch (role) {
     case "student":
@@ -36,6 +42,8 @@ function getDashboardRoute(role?: string) {
       return "/dashboard/tutor";
     case "parent":
       return "/dashboard/parent";
+    case "admin":
+      return "/dashboard/admin";
     default:
       return "/auth/login";
   }
@@ -92,6 +100,16 @@ function Router() {
                   <Route path="/dashboard/parent/orders" component={ParentOrdersPage} />
                   <Route path="/dashboard/parent/addresses" component={ParentAddressesPage} />
                   <Route path="/dashboard/parent/settings" component={ParentSettingsPage} />
+                </>
+              )}
+
+              {/* Admin Dashboard */}
+              {user.role === "admin" && (
+                <>
+                  <Route path="/dashboard/admin" component={AdminDashboard} />
+                  <Route path="/dashboard/admin/users" component={AdminUsersPage} />
+                  <Route path="/dashboard/admin/reports" component={AdminReportsPage} />
+                  <Route path="/dashboard/admin/analytics" component={AdminAnalyticsPage} />
                 </>
               )}
 
