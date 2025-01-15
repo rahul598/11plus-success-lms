@@ -1,12 +1,24 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Menu, X } from "lucide-react";
+import { Menu, X, User, LogOut, Home, ShoppingBag, Settings } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useUser } from "@/hooks/use-user";
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [, setLocation] = useLocation();
+  const { user, logout } = useUser();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -17,6 +29,15 @@ export function Header() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setLocation('/auth/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
 
   return (
     <header className={`fixed top-0 left-0 w-full z-50 transition-colors duration-300 ${
@@ -66,22 +87,63 @@ export function Header() {
               </Button>
             </Link>
 
-            <Link href="/auth/login">
-              <Button 
-                variant="outline"
-                className="hidden md:flex bg-[#00AA9B] text-white hover:bg-[#009488] border-none"
-              >
-                Login
-              </Button>
-            </Link>
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                    <Avatar className="h-10 w-10">
+                      <AvatarFallback className="bg-primary/10">
+                        {user.name?.[0] || user.username[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end">
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setLocation('/profile')}>
+                    <User className="mr-2 h-4 w-4" />
+                    Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setLocation('/orders')}>
+                    <ShoppingBag className="mr-2 h-4 w-4" />
+                    Orders
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setLocation('/addresses')}>
+                    <Home className="mr-2 h-4 w-4" />
+                    Addresses
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setLocation('/settings')}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <>
+                <Link href="/auth/login">
+                  <Button 
+                    variant="outline"
+                    className="hidden md:flex bg-[#00AA9B] text-white hover:bg-[#009488] border-none"
+                  >
+                    Login
+                  </Button>
+                </Link>
 
-            <Link href="/auth/signup">
-              <Button 
-                className="hidden md:flex bg-[#32DBC9] text-white hover:bg-[#2BC4B4] border-none"
-              >
-                Sign up
-              </Button>
-            </Link>
+                <Link href="/auth/signup">
+                  <Button 
+                    className="hidden md:flex bg-[#32DBC9] text-white hover:bg-[#2BC4B4] border-none"
+                  >
+                    Sign up
+                  </Button>
+                </Link>
+              </>
+            )}
 
             <motion.button
               whileHover={{ scale: 1.1 }}
@@ -123,23 +185,49 @@ export function Header() {
                 <Link href="/contact-us" onClick={() => setIsMenuOpen(false)} className="text-[#2D3648] hover:text-[#00AA9B] font-medium px-4">
                   Contact Us
                 </Link>
-                <div className="flex flex-col space-y-2 px-4">
-                  <Link href="/auth/login" onClick={() => setIsMenuOpen(false)}>
-                    <Button 
-                      variant="outline"
-                      className="w-full bg-[#00AA9B] text-white hover:bg-[#009488] border-none"
+                {user ? (
+                  <>
+                    <Link href="/profile" onClick={() => setIsMenuOpen(false)} className="text-[#2D3648] hover:text-[#00AA9B] font-medium px-4">
+                      Profile
+                    </Link>
+                    <Link href="/orders" onClick={() => setIsMenuOpen(false)} className="text-[#2D3648] hover:text-[#00AA9B] font-medium px-4">
+                      Orders
+                    </Link>
+                    <Link href="/addresses" onClick={() => setIsMenuOpen(false)} className="text-[#2D3648] hover:text-[#00AA9B] font-medium px-4">
+                      Addresses
+                    </Link>
+                    <Link href="/settings" onClick={() => setIsMenuOpen(false)} className="text-[#2D3648] hover:text-[#00AA9B] font-medium px-4">
+                      Settings
+                    </Link>
+                    <button
+                      onClick={() => {
+                        handleLogout();
+                        setIsMenuOpen(false);
+                      }}
+                      className="text-[#2D3648] hover:text-[#00AA9B] font-medium px-4 text-left"
                     >
-                      Login
-                    </Button>
-                  </Link>
-                  <Link href="/auth/signup" onClick={() => setIsMenuOpen(false)}>
-                    <Button 
-                      className="w-full bg-[#32DBC9] text-white hover:bg-[#2BC4B4] border-none"
-                    >
-                      Sign up
-                    </Button>
-                  </Link>
-                </div>
+                      Logout
+                    </button>
+                  </>
+                ) : (
+                  <div className="flex flex-col space-y-2 px-4">
+                    <Link href="/auth/login" onClick={() => setIsMenuOpen(false)}>
+                      <Button 
+                        variant="outline"
+                        className="w-full bg-[#00AA9B] text-white hover:bg-[#009488] border-none"
+                      >
+                        Login
+                      </Button>
+                    </Link>
+                    <Link href="/auth/signup" onClick={() => setIsMenuOpen(false)}>
+                      <Button 
+                        className="w-full bg-[#32DBC9] text-white hover:bg-[#2BC4B4] border-none"
+                      >
+                        Sign up
+                      </Button>
+                    </Link>
+                  </div>
+                )}
               </nav>
             </motion.div>
           )}
