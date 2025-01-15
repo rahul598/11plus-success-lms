@@ -4,11 +4,16 @@ import nodemailer from 'nodemailer';
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || 'mail.kafilontech.com',
   port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: false,
+  secure: false, // Use STARTTLS
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS
-  }
+  },
+  tls: {
+    rejectUnauthorized: false, // Accept self-signed certificates
+    ciphers: 'SSLv3'
+  },
+  debug: true // Enable debug logging
 });
 
 export async function sendWelcomeEmail(email: string, name: string) {
@@ -34,11 +39,26 @@ export async function sendWelcomeEmail(email: string, name: string) {
   };
 
   try {
+    // Verify connection configuration
+    await new Promise((resolve, reject) => {
+      transporter.verify(function (error, success) {
+        if (error) {
+          console.error('SMTP Verification Error:', error);
+          reject(error);
+        } else {
+          console.log('Server is ready to take our messages');
+          resolve(success);
+        }
+      });
+    });
+
+    // Send email
     const info = await transporter.sendMail(mailOptions);
     console.log('Welcome email sent:', info.messageId);
     return true;
   } catch (error) {
     console.error('Error sending welcome email:', error);
+    // Continue with user registration even if email fails
     return false;
   }
 }
