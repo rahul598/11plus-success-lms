@@ -4,13 +4,19 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Upload, Search, Loader2, Trash2 } from "lucide-react";
+import { Upload, Search, Loader2, Trash2, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const SUBJECT_CATEGORIES = [
@@ -35,6 +41,7 @@ export function MediaGrid() {
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<MediaFile | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -204,7 +211,14 @@ export function MediaGrid() {
                     alt={file.filename}
                     className="w-full h-48 object-cover"
                   />
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      onClick={() => setSelectedImage(file)}
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
                     <Button
                       variant="destructive"
                       size="icon"
@@ -240,6 +254,29 @@ export function MediaGrid() {
           </p>
         </div>
       )}
+
+      <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+        {selectedImage && (
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle className="text-lg">{selectedImage.filename}</DialogTitle>
+            </DialogHeader>
+            <div className="mt-4">
+              <img
+                src={selectedImage.url}
+                alt={selectedImage.filename}
+                className="w-full rounded-lg"
+                style={{ maxHeight: "70vh", objectFit: "contain" }}
+              />
+            </div>
+            <div className="mt-2 text-sm text-muted-foreground">
+              <p>Category: {selectedImage.category}</p>
+              <p>Size: {formatFileSize(selectedImage.fileSize)}</p>
+              <p>Uploaded: {new Date(selectedImage.createdAt).toLocaleDateString()}</p>
+            </div>
+          </DialogContent>
+        )}
+      </Dialog>
     </div>
   );
 }
