@@ -166,6 +166,31 @@ export function setupAuth(app: Express) {
         newUser.connectedStudents = [parseInt(studentId)];
       }
 
+      // Create test users for development
+      if (process.env.NODE_ENV === 'development') {
+        const testUsers = [
+          { username: 'parent1', password: 'parent123', email: 'parent@test.com', role: 'parent' },
+          { username: 'teacher1', password: 'teacher123', email: 'teacher@test.com', role: 'tutor' },
+          { username: 'student1', password: 'student123', email: 'student@test.com', role: 'student' }
+        ];
+
+        for (const testUser of testUsers) {
+          const [existing] = await db
+            .select()
+            .from(users)
+            .where(eq(users.username, testUser.username))
+            .limit(1);
+
+          if (!existing) {
+            const hashedPwd = await crypto.hash(testUser.password);
+            await db.insert(users).values({
+              ...testUser,
+              password: hashedPwd,
+            });
+          }
+        }
+      }
+
       req.login(newUser, (err) => {
         if (err) {
           return next(err);
