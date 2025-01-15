@@ -88,7 +88,11 @@ export function RoleSelectionModal({ isOpen, onClose, userId }: RoleSelectionMod
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent className="sm:max-w-[425px]" onEscapeKeyDown={(e) => e.preventDefault()}>
+      <DialogContent 
+        className="sm:max-w-[425px]" 
+        onEscapeKeyDown={(e) => e.preventDefault()}
+        onPointerDownOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>Choose Your Role</DialogTitle>
           <DialogDescription>

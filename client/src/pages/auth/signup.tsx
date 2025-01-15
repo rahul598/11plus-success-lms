@@ -55,7 +55,6 @@ export default function SignupPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       setIsLoading(true);
-      // Use email as username
       const payload = {
         username: values.email,
         email: values.email,
@@ -76,15 +75,14 @@ export default function SignupPage() {
       }
 
       const data = await response.json();
-      setUserId(data.user.id);
 
       toast({
         title: "Success",
-        description: "Account created successfully!",
+        description: "Please select your role to complete registration",
       });
 
-      // Show role selection modal instead of redirecting
       setShowRoleModal(true);
+      document.body.style.overflow = 'hidden';
     } catch (error: any) {
       toast({
         title: "Error",
@@ -105,7 +103,9 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-primary flex items-center justify-center p-4">
+    <div className={`min-h-screen bg-gradient-primary flex items-center justify-center p-4 ${
+      showRoleModal ? 'pointer-events-none' : ''
+    }`}>
       <div className="w-full max-w-md">
         <div className="bg-white rounded-xl shadow-lg p-6 space-y-6">
           <div className="space-y-2">
@@ -121,7 +121,6 @@ export default function SignupPage() {
             </p>
           </div>
 
-          {/* Social Login Buttons */}
           <div className="space-y-3">
             <Button
               type="button"
@@ -229,7 +228,10 @@ export default function SignupPage() {
 
       <RoleSelectionModal 
         isOpen={showRoleModal} 
-        onClose={() => setShowRoleModal(false)}
+        onClose={() => {
+          setShowRoleModal(false);
+          document.body.style.overflow = 'auto';
+        }}
         userId={userId}
       />
     </div>
