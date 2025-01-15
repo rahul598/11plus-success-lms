@@ -31,7 +31,6 @@ export default function LoginPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -44,9 +43,7 @@ export default function LoginPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       setIsLoading(true);
-      const loginUrl = isAdmin ? "/api/admin/login" : "/api/login";
-
-      const response = await fetch(loginUrl, {
+      const response = await fetch("/api/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -66,9 +63,15 @@ export default function LoginPage() {
         description: data.message || "Successfully logged in!",
       });
 
-      // Redirect based on role for admin, otherwise go to home
+      // Redirect based on user role
       if (data.user.role === "admin") {
         setLocation('/dashboard/admin');
+      } else if (data.user.role === "student") {
+        setLocation('/dashboard/student');
+      } else if (data.user.role === "tutor") {
+        setLocation('/dashboard/tutor');
+      } else if (data.user.role === "parent") {
+        setLocation('/dashboard/parent');
       } else {
         setLocation('/');
       }
@@ -103,7 +106,7 @@ export default function LoginPage() {
               Back to Home
             </Link>
             <h1 className="text-3xl font-display font-bold text-[#2D3648]">
-              {isAdmin ? "Admin Login" : "Welcome Back"}
+              Welcome Back
             </h1>
             <p className="text-[#545F71]">
               Enter your credentials to access your account
@@ -141,17 +144,6 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Toggle Admin Login */}
-          <div className="flex items-center justify-end">
-            <Button
-              variant="ghost"
-              className="text-sm"
-              onClick={() => setIsAdmin(!isAdmin)}
-            >
-              {isAdmin ? "Switch to User Login" : "Admin Login"}
-            </Button>
-          </div>
-
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
@@ -185,21 +177,19 @@ export default function LoginPage() {
                 className="w-full bg-[#32DBC9] hover:bg-[#2BC4B4] text-white"
                 disabled={isLoading}
               >
-                {isLoading ? "Logging in..." : (isAdmin ? "Admin Login" : "Login")}
+                {isLoading ? "Logging in..." : "Login"}
               </Button>
             </form>
           </Form>
 
-          {!isAdmin && (
-            <div className="text-center">
-              <p className="text-sm text-[#545F71]">
-                Don't have an account?{" "}
-                <Link href="/auth/signup" className="text-[#00AA9B] hover:underline">
-                  Sign up
-                </Link>
-              </p>
-            </div>
-          )}
+          <div className="text-center">
+            <p className="text-sm text-[#545F71]">
+              Don't have an account?{" "}
+              <Link href="/auth/signup" className="text-[#00AA9B] hover:underline">
+                Sign up
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
     </div>
