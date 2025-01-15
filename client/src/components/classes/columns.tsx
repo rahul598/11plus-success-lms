@@ -19,6 +19,10 @@ export type LiveClass = {
   status: "scheduled" | "in_progress" | "completed" | "cancelled";
 };
 
+interface DataTableProps {
+  onJoinClass?: (classId: string) => void;
+}
+
 export const columns: ColumnDef<LiveClass>[] = [
   {
     accessorKey: "title",
@@ -73,8 +77,9 @@ export const columns: ColumnDef<LiveClass>[] = [
   },
   {
     id: "actions",
-    cell: ({ row }) => {
+    cell: ({ row, table }) => {
       const liveClass = row.original;
+      const { onJoinClass } = table.options.meta as DataTableProps;
 
       return (
         <DropdownMenu>
@@ -86,6 +91,11 @@ export const columns: ColumnDef<LiveClass>[] = [
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            {liveClass.status === "in_progress" && (
+              <DropdownMenuItem onClick={() => onJoinClass?.(liveClass.id.toString())}>
+                Join Class
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onClick={() => navigator.clipboard.writeText(liveClass.id.toString())}>
               Copy Class ID
             </DropdownMenuItem>

@@ -16,16 +16,21 @@ import {
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
+  onJoinClass?: (classId: string) => void;
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
+  onJoinClass,
 }: DataTableProps<TData, TValue>) {
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    meta: {
+      onJoinClass,
+    },
   });
 
   return (
