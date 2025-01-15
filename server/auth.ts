@@ -5,7 +5,7 @@ import session from "express-session";
 import createMemoryStore from "memorystore";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import { users, type SelectUser } from "@db/schema";
+import { users, parentStudentRelations } from "@db/schema";
 import { db } from "@db";
 import { eq } from "drizzle-orm";
 
@@ -30,7 +30,9 @@ const crypto = {
 
 declare global {
   namespace Express {
-    interface User extends SelectUser {}
+    interface User extends SelectUser {
+      connectedStudents?: number[]; // For parents: IDs of connected students
+    }
   }
 }
 
@@ -74,6 +76,16 @@ export function setupAuth(app: Express) {
           return done(null, false, { message: "Incorrect password." });
         }
 
+        // If user is a parent, fetch connected students
+        if (user.role === 'parent') {
+          const relations = await db
+            .select()
+            .from(parentStudentRelations)
+            .where(eq(parentStudentRelations.parentId, user.id));
+
+          user.connectedStudents = relations.map(r => r.studentId);
+        }
+
         // Update last login
         await db
           .update(users)
@@ -98,6 +110,16 @@ export function setupAuth(app: Express) {
         .from(users)
         .where(eq(users.id, id))
         .limit(1);
+
+      if (user && user.role === 'parent') {
+        const relations = await db
+          .select()
+          .from(parentStudentRelations)
+          .where(eq(parentStudentRelations.parentId, user.id));
+
+        user.connectedStudents = relations.map(r => r.studentId);
+      }
+
       done(null, user);
     } catch (err) {
       done(err);
@@ -106,7 +128,7 @@ export function setupAuth(app: Express) {
 
   app.post("/api/register", async (req, res, next) => {
     try {
-      const { username, password, email, role } = req.body;
+      const { username, password, email, role, studentId } = req.body;
 
       // Check if user already exists
       const [existingUser] = await db
@@ -132,6 +154,17 @@ export function setupAuth(app: Express) {
           role: role || "student",
         })
         .returning();
+
+      // If registering as a parent and studentId provided, create relation
+      if (role === 'parent' && studentId) {
+        await db.insert(parentStudentRelations).values({
+          parentId: newUser.id,
+          studentId: parseInt(studentId),
+          relationship: 'guardian',
+        });
+
+        newUser.connectedStudents = [parseInt(studentId)];
+      }
 
       req.login(newUser, (err) => {
         if (err) {

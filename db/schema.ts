@@ -1,17 +1,119 @@
-import { pgTable, text, serial, integer, boolean, timestamp, decimal, jsonb, date } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, decimal, jsonb, date, foreignKey } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 
+// Existing users table with updated role enum
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").unique().notNull(),
   password: text("password").notNull(),
   email: text("email").unique().notNull(),
-  role: text("role", { enum: ["admin", "tutor", "student"] }).default("student").notNull(),
+  role: text("role", { enum: ["admin", "tutor", "parent", "student"] }).default("student").notNull(),
   fcmToken: text("fcm_token"),
   hasActiveSubscription: boolean("has_active_subscription").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   lastLogin: timestamp("last_login"),
 });
+
+// New table for parent-student relationships
+export const parentStudentRelations = pgTable("parent_student_relations", {
+  id: serial("id").primaryKey(),
+  parentId: integer("parent_id").references(() => users.id).notNull(),
+  studentId: integer("student_id").references(() => users.id).notNull(),
+  relationship: text("relationship", { 
+    enum: ["father", "mother", "guardian"] 
+  }).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// New table for exam PDFs
+export const examPDFs = pgTable("exam_pdfs", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description"),
+  fileUrl: text("file_url").notNull(),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// New table for scheduled exams
+export const scheduledExams = pgTable("scheduled_exams", {
+  id: serial("id").primaryKey(),
+  examPdfId: integer("exam_pdf_id").references(() => examPDFs.id).notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  scheduledDate: timestamp("scheduled_date").notNull(),
+  duration: integer("duration").notNull(), // in minutes
+  targetAge: integer("target_age").notNull(), // for 5-year-olds
+  status: text("status", {
+    enum: ["scheduled", "in_progress", "completed", "cancelled"]
+  }).default("scheduled").notNull(),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// New table for exam submissions
+export const examSubmissions = pgTable("exam_submissions", {
+  id: serial("id").primaryKey(),
+  examId: integer("exam_id").references(() => scheduledExams.id).notNull(),
+  studentId: integer("student_id").references(() => users.id).notNull(),
+  submittedBy: integer("submitted_by").references(() => users.id).notNull(), // parent who submitted
+  scannedFileUrl: text("scanned_file_url").notNull(),
+  status: text("status", {
+    enum: ["submitted", "processing", "graded", "error"]
+  }).default("submitted").notNull(),
+  submissionTime: timestamp("submission_time").defaultNow().notNull(),
+  ocrResults: jsonb("ocr_results"),
+  score: decimal("score", { precision: 5, scale: 2 }),
+  feedback: text("feedback"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// New table for student performance tracking
+export const studentPerformance = pgTable("student_performance", {
+  id: serial("id").primaryKey(),
+  studentId: integer("student_id").references(() => users.id).notNull(),
+  examId: integer("exam_id").references(() => scheduledExams.id).notNull(),
+  score: decimal("score", { precision: 5, scale: 2 }).notNull(),
+  timeSpent: integer("time_spent"), // in minutes
+  accuracy: decimal("accuracy", { precision: 5, scale: 2 }),
+  strengths: jsonb("strengths").default([]),
+  weaknesses: jsonb("weaknesses").default([]),
+  recommendations: jsonb("recommendations").default([]),
+  parentFeedback: text("parent_feedback"),
+  tutorFeedback: text("tutor_feedback"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Create schemas for new tables
+export const insertParentStudentRelationSchema = createInsertSchema(parentStudentRelations);
+export const selectParentStudentRelationSchema = createSelectSchema(parentStudentRelations);
+export type InsertParentStudentRelation = typeof parentStudentRelations.$inferInsert;
+export type SelectParentStudentRelation = typeof parentStudentRelations.$inferSelect;
+
+export const insertExamPDFSchema = createInsertSchema(examPDFs);
+export const selectExamPDFSchema = createSelectSchema(examPDFs);
+export type InsertExamPDF = typeof examPDFs.$inferInsert;
+export type SelectExamPDF = typeof examPDFs.$inferSelect;
+
+export const insertScheduledExamSchema = createInsertSchema(scheduledExams);
+export const selectScheduledExamSchema = createSelectSchema(scheduledExams);
+export type InsertScheduledExam = typeof scheduledExams.$inferInsert;
+export type SelectScheduledExam = typeof scheduledExams.$inferSelect;
+
+export const insertExamSubmissionSchema = createInsertSchema(examSubmissions);
+export const selectExamSubmissionSchema = createSelectSchema(examSubmissions);
+export type InsertExamSubmission = typeof examSubmissions.$inferInsert;
+export type SelectExamSubmission = typeof examSubmissions.$inferSelect;
+
+export const insertStudentPerformanceSchema = createInsertSchema(studentPerformance);
+export const selectStudentPerformanceSchema = createSelectSchema(studentPerformance);
+export type InsertStudentPerformance = typeof studentPerformance.$inferInsert;
+export type SelectStudentPerformance = typeof studentPerformance.$inferSelect;
 
 export const questions = pgTable("questions", {
   id: serial("id").primaryKey(),
