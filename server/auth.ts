@@ -8,6 +8,7 @@ import { promisify } from "util";
 import { users } from "@db/schema";
 import { db } from "@db";
 import { eq } from "drizzle-orm";
+import { sendWelcomeEmail } from "./utils/email";
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -111,7 +112,7 @@ export function setupAuth(app: Express) {
 
   app.post("/api/register", async (req, res, next) => {
     try {
-      const { username, password, email } = req.body;
+      const { username, password, email, name } = req.body;
 
       // Check if user already exists
       const [existingUser] = await db
@@ -135,8 +136,12 @@ export function setupAuth(app: Express) {
           password: hashedPassword,
           email,
           role: "student", // Default role
+          name: name // Added name field
         })
         .returning();
+
+      // Send welcome email
+      await sendWelcomeEmail(email, name);
 
       req.login(newUser, (err) => {
         if (err) {
