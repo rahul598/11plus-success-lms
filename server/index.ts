@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { setupWebSocketServer } from "./socket";
 import classRoutes from "./routes/classes";
+import examRoutes from "./routes/exams";
 
 const app = express();
 app.use(express.json());
@@ -38,6 +39,8 @@ app.use((req, res, next) => {
   try {
     // Register class routes
     app.use(classRoutes);
+    // Register exam routes
+    app.use(examRoutes);
 
     // First register all API routes
     const server = registerRoutes(app);
