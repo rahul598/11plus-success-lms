@@ -17,6 +17,9 @@ import StudentDashboard from "@/pages/dashboard/student";
 import ParentDashboard from "@/pages/dashboard/parent";
 import TutorDashboard from "@/pages/dashboard/tutor";
 import AdminDashboard from "@/pages/dashboard/admin";
+import AdminAnalyticsPage from "@/pages/dashboard/admin/analytics";
+import AdminReportsPage from "@/pages/dashboard/admin/reports";
+import AdminUsersPage from "@/pages/dashboard/admin/users";
 import { useUser } from "@/hooks/use-user";
 import { useEffect } from "react";
 import { useLocation } from "wouter";
@@ -93,14 +96,19 @@ function Router() {
 
               {/* Admin Dashboard */}
               {user.role === "admin" && (
-                <Route path="/dashboard/admin" component={AdminDashboard} />
+                <>
+                  <Route path="/dashboard/admin" component={AdminDashboard} />
+                  <Route path="/dashboard/admin/analytics" component={AdminAnalyticsPage} />
+                  <Route path="/dashboard/admin/reports" component={AdminReportsPage} />
+                  <Route path="/dashboard/admin/users" component={AdminUsersPage} />
+                </>
               )}
 
               {/* If accessing wrong dashboard routes, redirect to correct one */}
               <Route path="/dashboard/*">
                 {() => {
                   const correctDashboard = getDashboardRoute(user.role);
-                  if (location !== correctDashboard) {
+                  if (!location.startsWith(correctDashboard)) {
                     setLocation(correctDashboard);
                   }
                   return null;
