@@ -18,20 +18,8 @@ import ParentDashboard from "@/pages/dashboard/parent";
 import TutorDashboard from "@/pages/dashboard/tutor";
 import AdminDashboard from "@/pages/dashboard/admin";
 import { useUser } from "@/hooks/use-user";
-
-// Parent Dashboard Pages
-import ParentProfilePage from "@/pages/dashboard/parent/profile";
-import ParentProgressPage from "@/pages/dashboard/parent/progress";
-import ParentSchedulePage from "@/pages/dashboard/parent/schedule";
-import ParentMessagesPage from "@/pages/dashboard/parent/messages";
-import ParentOrdersPage from "@/pages/dashboard/parent/orders";
-import ParentAddressesPage from "@/pages/dashboard/parent/addresses";
-import ParentSettingsPage from "@/pages/dashboard/parent/settings";
-
-// Admin Dashboard Pages
-import AdminUsersPage from "@/pages/dashboard/admin/users";
-import AdminReportsPage from "@/pages/dashboard/admin/reports";
-import AdminAnalyticsPage from "@/pages/dashboard/admin/analytics";
+import { useEffect } from "react";
+import { useLocation } from "wouter";
 
 function getDashboardRoute(role?: string) {
   switch (role) {
@@ -50,6 +38,16 @@ function getDashboardRoute(role?: string) {
 
 function Router() {
   const { user, isLoading } = useUser();
+  const [location, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (user) {
+      const dashboardRoute = getDashboardRoute(user.role);
+      if (location === "/" || location === "/auth/login") {
+        setLocation(dashboardRoute);
+      }
+    }
+  }, [user, location, setLocation]);
 
   if (isLoading) {
     return (
@@ -57,13 +55,6 @@ function Router() {
         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
       </div>
     );
-  }
-
-  // If user is logged in, redirect them to their dashboard
-  if (user && window.location.pathname === "/") {
-    const dashboardRoute = getDashboardRoute(user.role);
-    window.location.href = dashboardRoute;
-    return null;
   }
 
   return (
@@ -97,34 +88,20 @@ function Router() {
 
               {/* Parent Dashboard */}
               {user.role === "parent" && (
-                <>
-                  <Route path="/dashboard/parent" component={ParentDashboard} />
-                  <Route path="/dashboard/parent/profile" component={ParentProfilePage} />
-                  <Route path="/dashboard/parent/progress" component={ParentProgressPage} />
-                  <Route path="/dashboard/parent/schedule" component={ParentSchedulePage} />
-                  <Route path="/dashboard/parent/messages" component={ParentMessagesPage} />
-                  <Route path="/dashboard/parent/orders" component={ParentOrdersPage} />
-                  <Route path="/dashboard/parent/addresses" component={ParentAddressesPage} />
-                  <Route path="/dashboard/parent/settings" component={ParentSettingsPage} />
-                </>
+                <Route path="/dashboard/parent" component={ParentDashboard} />
               )}
 
               {/* Admin Dashboard */}
               {user.role === "admin" && (
-                <>
-                  <Route path="/dashboard/admin" component={AdminDashboard} />
-                  <Route path="/dashboard/admin/users" component={AdminUsersPage} />
-                  <Route path="/dashboard/admin/reports" component={AdminReportsPage} />
-                  <Route path="/dashboard/admin/analytics" component={AdminAnalyticsPage} />
-                </>
+                <Route path="/dashboard/admin" component={AdminDashboard} />
               )}
 
               {/* If accessing wrong dashboard routes, redirect to correct one */}
               <Route path="/dashboard/*">
                 {() => {
                   const correctDashboard = getDashboardRoute(user.role);
-                  if (window.location.pathname !== correctDashboard) {
-                    window.location.href = correctDashboard;
+                  if (location !== correctDashboard) {
+                    setLocation(correctDashboard);
                   }
                   return null;
                 }}
@@ -134,7 +111,7 @@ function Router() {
             // Redirect to login if not authenticated
             <Route path="/dashboard/*">
               {() => {
-                window.location.href = "/auth/login";
+                setLocation("/auth/login");
                 return null;
               }}
             </Route>
