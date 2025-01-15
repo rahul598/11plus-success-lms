@@ -480,6 +480,116 @@ export function registerRoutes(app: Express): Server {
   });
 
 
+  // Admin Stats endpoints
+  app.get("/api/admin/stats", requireAdmin, async (_req, res) => {
+    try {
+      const [userCount] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(users);
+
+      const [questionCount] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(questions);
+
+      const [tutorCount] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(tutors)
+        .where(eq(tutors.available, true));
+
+      const [{ revenue }] = await db
+        .select({
+          revenue: sql<number>`coalesce(sum(amount::numeric), 0)`,
+        })
+        .from(payments)
+        .where(eq(payments.status, "completed"));
+
+      res.json({
+        users: userCount.count,
+        questions: questionCount.count,
+        tutors: tutorCount.count,
+        revenue: revenue || 0,
+      });
+    } catch (error: any) {
+      console.error("Error fetching admin stats:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  // Admin Analytics Overview
+  app.get("/api/analytics/overview", requireAdmin, async (_req, res) => {
+    try {
+      // Get monthly revenue data for the past 12 months
+      const monthlyRevenue = await db
+        .select({
+          month: sql<string>`date_trunc('month', created_at)`,
+          revenue: sql<number>`coalesce(sum(amount::numeric), 0)`,
+        })
+        .from(payments)
+        .where(eq(payments.status, "completed"))
+        .groupBy(sql`date_trunc('month', created_at)`)
+        .orderBy(sql`date_trunc('month', created_at)`);
+
+      // Get user statistics
+      const [userStats] = await db
+        .select({
+          total: sql<number>`count(*)`,
+          newThisMonth: sql<number>`count(*) filter (where created_at >= date_trunc('month', current_date))`,
+          activeThisMonth: sql<number>`count(*) filter (where last_login >= date_trunc('month', current_date))`,
+        })
+        .from(users);
+
+      const previousMonthUsers = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(users)
+        .where(sql`created_at < date_trunc('month', current_date)`);
+
+      const growthRate = previousMonthUsers[0].count 
+        ? ((userStats.newThisMonth / previousMonthUsers[0].count) * 100) 
+        : 0;
+
+      res.json({
+        revenue: {
+          monthly: monthlyRevenue.map(m => Number(m.revenue)),
+          total: monthlyRevenue.reduce((acc, curr) => acc + Number(curr.revenue), 0),
+        },
+        users: {
+          total: userStats.total,
+          newThisMonth: userStats.newThisMonth,
+          activeThisMonth: userStats.activeThisMonth,
+          growthRate,
+        },
+      });
+    } catch (error: any) {
+      console.error("Error fetching analytics overview:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
+  // Recent Sales
+  app.get("/api/sales/recent", requireAdmin, async (_req, res) => {
+    try {
+      const recentSales = await db
+        .select({
+          id: payments.id,
+          customerName: users.username,
+          customerEmail: users.email,
+          amount: payments.amount,
+          date: payments.createdAt,
+          avatar: users.avatar,
+        })
+        .from(payments)
+        .innerJoin(users, eq(users.id, payments.userId))
+        .where(eq(payments.status, "completed"))
+        .orderBy(desc(payments.createdAt))
+        .limit(5);
+
+      res.json(recentSales);
+    } catch (error: any) {
+      console.error("Error fetching recent sales:", error);
+      res.status(500).send(error.message);
+    }
+  });
+
   // Stats endpoints
   app.get("/api/stats", requireAdmin, async (_req, res) => {
     const [userCount] = await db
@@ -842,232 +952,6 @@ export function registerRoutes(app: Express): Server {
         });
       }
     }
-  }
-
-  // Get question statistics
-  app.get("/api/questions/stats", requireAuth, async (_req, res) => {
-    try {
-      const [{ total }] = await db
-        .select({
-          total: sql<number>`count(*)`,
-        })
-        .from(questions);
-
-      const categoryCounts = await db
-        .select({
-          category: questions.category,
-          total: sql<number>`count(*)`,
-        })
-        .from(questions)
-        .groupBy(questions.category);
-
-      const byCategory = Object.fromEntries(
-        categoryCounts.map(({ category, total }) => [
-          category,
-          { total },
-        ])
-      );
-
-      res.json({
-        total,
-        byCategory,
-      });
-    } catch (error: any) {
-      console.error("Error fetching question statistics:", error);
-      res.status(500).send(error.message);
-    }
-  });
-
-  // Event Management Routes
-  app.get("/api/events", requireAuth, async (_req, res) => {
-    try {
-      const allEvents = await db
-        .select()
-        .from(events)
-        .orderBy(desc(events.startTime));
-      res.json(allEvents);
-    } catch (error: any) {
-      console.error("Error fetching events:", error);
-      res.status(500).send(error.message);
-    }
-  });
-
-  app.post("/api/events", requireAuth, async (req: Request & { user?: Express.User }, res) => {
-    if (!req.user) {
-      return res.status(401).send("Unauthorized");
-    }
-
-    try {
-      const [event] = await db
-        .insert(events)
-        .values({
-          ...req.body,
-          createdBy: req.user.id,
-        })
-        .returning();
-
-      await db.insert(eventParticipants).values({
-        eventId: event.id,
-        userId: req.user.id,
-        role: "organizer",
-      });
-
-      if (event.type === "exam") {
-        const students = await db
-          .select()
-          .from(users)
-          .where(eq(users.role, "student"));
-
-        await Promise.all(
-          students.map((student) =>
-            db.insert(notifications).values({
-              userId: student.id,
-              title: `New Exam Scheduled: ${event.title}`,
-              content: `A new exam has been scheduled for ${new Date(event.startTime).toLocaleDateString()}`,
-              type: "event",
-            })
-          )
-        );
-      }
-
-      res.json(event);
-    } catch (error: any) {
-      console.error("Error creating event:", error);
-      res.status(500).send(error.message);
-    }
-  });
-
-  app.post("/api/events/:id/register", requireAuth, async (req: Request & { user?: Express.User }, res) => {
-    if (!req.user) {
-      return res.status(401).send("Unauthorized");
-    }
-
-    try {
-      const eventId = parseInt(req.params.id);
-      const [event] = await db
-        .select()
-        .from(events)
-        .where(eq(events.id, eventId))
-        .limit(1);
-
-      if (!event) {
-        return res.status(404).send("Event not found");
-      }
-
-      if (event.capacity && event.enrolledCount >= event.capacity) {
-        return res.status(400).send("Event is full");
-      }
-
-      const [registration] = await db
-        .insert(eventParticipants)
-        .values({
-          eventId,
-          userId: req.user.id,
-          role: "attendee",
-        })
-        .returning();
-
-      await db
-        .update(events)
-        .set({
-          enrolledCount: sql`${events.enrolledCount} + 1`,
-        })
-        .where(eq(events.id, eventId));
-
-      res.json(registration);
-    } catch (error: any) {
-      console.error("Error registering for event:", error);
-      res.status(500).send(error.message);
-    }
-  });
-
-  // Automated Result Processing Routes
-  app.post("/api/mock-tests/:sessionId/process-results", requireAuth, async (req: Request & { user?: Express.User }, res) => {
-    if (!req.user) {
-      return res.status(401).send("Unauthorized");
-    }
-
-    try {
-      const sessionId = parseInt(req.params.sessionId);
-      const [session] = await db
-        .select()
-        .from(mockTestSessions)
-        .where(eq(mockTestSessions.id, sessionId))
-        .limit(1);
-
-      if (!session) {
-        return res.status(404).send("Session not found");
-      }
-
-      // Process results logic here
-      res.json({ message: "Results processed successfully" });
-    } catch (error: any) {
-      console.error("Error processing results:", error);
-      res.status(500).send(error.message);
-    }
-  });
-
-  // Notification Routes
-  app.get("/api/notifications", requireAuth, async (req: Request & { user?: Express.User }, res) => {
-    if (!req.user) {
-      return res.status(401).send("Unauthorized");
-    }
-
-    try {
-      const userNotifications = await db
-        .select()
-        .from(notifications)
-        .where(eq(notifications.userId, req.user.id))
-        .orderBy(desc(notifications.createdAt));
-
-      res.json(userNotifications);
-    } catch (error: any) {
-      console.error("Error fetching notifications:", error);
-      res.status(500).send(error.message);
-    }
-  });
-
-  app.post("/api/notifications/:id/mark-read", requireAuth, async (req: Request & { user?: Express.User }, res) => {
-    if (!req.user) {
-      return res.status(401).send("Unauthorized");
-    }
-
-    try {
-      const [notification] = await db
-        .update(notifications)
-        .set({
-          status: "read",
-          readAt: new Date(),
-        })
-        .where(
-          and(
-            eq(notifications.id, parseInt(req.params.id)),
-            eq(notifications.userId, req.user.id)
-          )
-        )
-        .returning();
-
-      res.json(notification);
-    } catch (error: any) {
-      console.error("Error marking notification as read:", error);
-      res.status(500).send(error.message);
-    }
-  });
-
-  // Helper functions for result processing
-  function calculateConfidenceLevel(timeSpent: number): number {
-    if (timeSpent < 30) return 5;
-    if (timeSpent < 60) return 4;
-    if (timeSpent < 120) return 3;
-    if (timeSpent < 180) return 2;
-    return 1;
-  }
-
-  function categorizeMistake(selected: number, correct: number): string {
-    if (Math.abs(selected - correct) === 1) {
-      return "near_miss";
-    }
-    return "conceptual_error";
   }
 
   // Get question statistics

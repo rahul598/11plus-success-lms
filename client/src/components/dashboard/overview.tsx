@@ -1,34 +1,33 @@
 import { Line, LineChart, ResponsiveContainer, Tooltip } from "recharts";
+import { useQuery } from "@tanstack/react-query";
 
-const data = [
-  {
-    revenue: 2400,
-  },
-  {
-    revenue: 1398,
-  },
-  {
-    revenue: 9800,
-  },
-  {
-    revenue: 3908,
-  },
-  {
-    revenue: 4800,
-  },
-  {
-    revenue: 3800,
-  },
-  {
-    revenue: 4300,
-  },
-];
+interface AnalyticsData {
+  revenue: {
+    total: number;
+    monthly: number[];
+  };
+  users: {
+    total: number;
+    newThisMonth: number;
+    activeThisMonth: number;
+    growthRate: number;
+  };
+}
 
 export function Overview() {
+  const { data } = useQuery<AnalyticsData>({
+    queryKey: ["/api/analytics/overview"],
+  });
+
+  const chartData = data?.revenue.monthly.map((value, index) => ({
+    revenue: value,
+    month: `Month ${index + 1}`,
+  })) || [];
+
   return (
     <ResponsiveContainer width="100%" height={350}>
-      <LineChart data={data}>
-        <Tooltip 
+      <LineChart data={chartData}>
+        <Tooltip
           content={({ active, payload }) => {
             if (active && payload && payload.length) {
               return (
