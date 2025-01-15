@@ -13,9 +13,9 @@ const transporter = nodemailer.createTransport({
 
 export async function sendWelcomeEmail(email: string, name: string) {
   const mailOptions = {
-    from: '"Educational Platform" <test@kafilontech.com>',
+    from: '"11Plus-Success" <test@kafilontech.com>',
     to: email,
-    subject: 'Welcome to Our Educational Platform!',
+    subject: 'Welcome to 11Plus-Success!',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #2D3648;">Welcome ${name}! 🎉</h2>
@@ -28,7 +28,7 @@ export async function sendWelcomeEmail(email: string, name: string) {
           <li>Connect with expert tutors</li>
         </ul>
         <p>If you have any questions, feel free to reply to this email.</p>
-        <p>Best regards,<br>The Education Team</p>
+        <p>Best regards,<br>The 11Plus-Success Team</p>
       </div>
     `
   };
