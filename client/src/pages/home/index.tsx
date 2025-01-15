@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle2, ArrowRight, Star, Book, UserCheck, GraduationCap } from "lucide-react";
+import { ArrowRight, Star, Book, UserCheck, CheckCircle2 } from "lucide-react";
 
 export default function HomePage() {
   return (
