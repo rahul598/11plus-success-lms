@@ -7,7 +7,7 @@ export function Hero() {
     <section className="relative min-h-screen pt-20 overflow-hidden bg-gradient-to-b from-[#E6FAF8] to-white">
       {/* Background decorations */}
       <motion.img
-        src="/images/rotating star-01 3.png"
+        src="https://vinsonedge.com/wp-content/uploads/2025/01/rotating-star-01-3.png"
         alt="Star background"
         className="absolute right-[10%] top-[20%] w-8 h-8"
         animate={{ 
@@ -30,7 +30,7 @@ export function Hero() {
 
       {/* Floating backpack */}
       <motion.img
-        src="/images/Bag-slider-01 1.png"
+        src="https://vinsonedge.com/wp-content/uploads/2025/01/Bag-slider-01-1.png"
         alt="Floating backpack"
         className="absolute left-[15%] bottom-[30%] w-24 h-24"
         animate={{ 
@@ -72,7 +72,11 @@ export function Hero() {
               size="lg"
               className="bg-[#32DBC9] hover:bg-[#2BC4B4] text-white px-8 py-6 text-lg rounded-full shadow-xl hover:shadow-2xl transition-all duration-300"
             >
-              Book Your Mock Exam Now
+              <img 
+                src="https://vinsonedge.com/wp-content/uploads/2025/01/CTA-1.png" 
+                alt="Book Your Mock Exam Now" 
+                className="h-8"
+              />
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </motion.div>
@@ -80,7 +84,7 @@ export function Hero() {
 
         {/* Student image */}
         <motion.img
-          src="/images/slider-2-char 1.png"
+          src="https://vinsonedge.com/wp-content/uploads/2025/01/slider-2-char-1.png"
           alt="Student"
           className="absolute bottom-0 right-0 w-1/3 max-w-md"
           initial={{ opacity: 0, x: 100 }}
