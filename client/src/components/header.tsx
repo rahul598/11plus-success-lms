@@ -60,22 +60,28 @@ export function Header() {
 
           {/* Right side icons */}
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" className="w-10 h-10">
-              <img src="https://vinsonedge.com/wp-content/uploads/2025/01/Cart.png" alt="Cart" className="w-6 h-6" />
-            </Button>
+            <Link href="/cart">
+              <Button variant="ghost" size="icon" className="w-10 h-10">
+                <img src="https://vinsonedge.com/wp-content/uploads/2025/01/Cart.png" alt="Cart" className="w-6 h-6" />
+              </Button>
+            </Link>
 
-            <Button 
-              variant="outline"
-              className="hidden md:flex bg-[#00AA9B] text-white hover:bg-[#009488] border-none"
-            >
-              Login
-            </Button>
+            <Link href="/auth/login">
+              <Button 
+                variant="outline"
+                className="hidden md:flex bg-[#00AA9B] text-white hover:bg-[#009488] border-none"
+              >
+                Login
+              </Button>
+            </Link>
 
-            <Button 
-              className="hidden md:flex bg-[#32DBC9] text-white hover:bg-[#2BC4B4] border-none"
-            >
-              Sign up
-            </Button>
+            <Link href="/auth/signup">
+              <Button 
+                className="hidden md:flex bg-[#32DBC9] text-white hover:bg-[#2BC4B4] border-none"
+              >
+                Sign up
+              </Button>
+            </Link>
 
             <motion.button
               whileHover={{ scale: 1.1 }}
@@ -118,17 +124,21 @@ export function Header() {
                   Contact Us
                 </Link>
                 <div className="flex flex-col space-y-2 px-4">
-                  <Button 
-                    variant="outline"
-                    className="w-full bg-[#00AA9B] text-white hover:bg-[#009488] border-none"
-                  >
-                    Login
-                  </Button>
-                  <Button 
-                    className="w-full bg-[#32DBC9] text-white hover:bg-[#2BC4B4] border-none"
-                  >
-                    Sign up
-                  </Button>
+                  <Link href="/auth/login" onClick={() => setIsMenuOpen(false)}>
+                    <Button 
+                      variant="outline"
+                      className="w-full bg-[#00AA9B] text-white hover:bg-[#009488] border-none"
+                    >
+                      Login
+                    </Button>
+                  </Link>
+                  <Link href="/auth/signup" onClick={() => setIsMenuOpen(false)}>
+                    <Button 
+                      className="w-full bg-[#32DBC9] text-white hover:bg-[#2BC4B4] border-none"
+                    >
+                      Sign up
+                    </Button>
+                  </Link>
                 </div>
               </nav>
             </motion.div>

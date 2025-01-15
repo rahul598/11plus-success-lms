@@ -12,6 +12,8 @@ import AboutUsPage from "@/pages/about-us";
 import ContactUsPage from "@/pages/contact-us";
 import LoginPage from "@/pages/auth/login";
 import SignupPage from "@/pages/auth/signup";
+import CartPage from "@/pages/cart";
+import CheckoutPage from "@/pages/checkout";
 
 function Router() {
   return (
@@ -24,6 +26,8 @@ function Router() {
       <Route path="/contact-us" component={ContactUsPage} />
       <Route path="/auth/login" component={LoginPage} />
       <Route path="/auth/signup" component={SignupPage} />
+      <Route path="/cart" component={CartPage} />
+      <Route path="/checkout" component={CheckoutPage} />
       <Route component={NotFound} />
     </Switch>
   );

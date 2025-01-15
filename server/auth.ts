@@ -5,7 +5,7 @@ import session from "express-session";
 import createMemoryStore from "memorystore";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import { users, parentStudentRelations } from "@db/schema";
+import { users } from "@db/schema";
 import { db } from "@db";
 import { eq } from "drizzle-orm";
 
@@ -30,8 +30,11 @@ const crypto = {
 
 declare global {
   namespace Express {
-    interface User extends SelectUser {
-      connectedStudents?: number[]; // For parents: IDs of connected students
+    interface User {
+      id: number;
+      username: string;
+      email: string;
+      role: string;
     }
   }
 }
@@ -76,16 +79,6 @@ export function setupAuth(app: Express) {
           return done(null, false, { message: "Incorrect password." });
         }
 
-        // If user is a parent, fetch connected students
-        if (user.role === 'parent') {
-          const relations = await db
-            .select()
-            .from(parentStudentRelations)
-            .where(eq(parentStudentRelations.parentId, user.id));
-
-          user.connectedStudents = relations.map(r => r.studentId);
-        }
-
         // Update last login
         await db
           .update(users)
@@ -110,16 +103,6 @@ export function setupAuth(app: Express) {
         .from(users)
         .where(eq(users.id, id))
         .limit(1);
-
-      if (user && user.role === 'parent') {
-        const relations = await db
-          .select()
-          .from(parentStudentRelations)
-          .where(eq(parentStudentRelations.parentId, user.id));
-
-        user.connectedStudents = relations.map(r => r.studentId);
-      }
-
       done(null, user);
     } catch (err) {
       done(err);
@@ -128,7 +111,7 @@ export function setupAuth(app: Express) {
 
   app.post("/api/register", async (req, res, next) => {
     try {
-      const { username, password, email, role, studentId } = req.body;
+      const { username, password, email } = req.body;
 
       // Check if user already exists
       const [existingUser] = await db
@@ -151,51 +134,18 @@ export function setupAuth(app: Express) {
           username,
           password: hashedPassword,
           email,
-          role: role || "student",
+          role: "student", // Default role
         })
         .returning();
-
-      // If registering as a parent and studentId provided, create relation
-      if (role === 'parent' && studentId) {
-        await db.insert(parentStudentRelations).values({
-          parentId: newUser.id,
-          studentId: parseInt(studentId),
-          relationship: 'guardian',
-        });
-
-        newUser.connectedStudents = [parseInt(studentId)];
-      }
-
-      // Create test users for development
-      if (process.env.NODE_ENV === 'development') {
-        const testUsers = [
-          { username: 'parent1', password: 'parent123', email: 'parent@test.com', role: 'parent' },
-          { username: 'teacher1', password: 'teacher123', email: 'teacher@test.com', role: 'tutor' },
-          { username: 'student1', password: 'student123', email: 'student@test.com', role: 'student' }
-        ];
-
-        for (const testUser of testUsers) {
-          const [existing] = await db
-            .select()
-            .from(users)
-            .where(eq(users.username, testUser.username))
-            .limit(1);
-
-          if (!existing) {
-            const hashedPwd = await crypto.hash(testUser.password);
-            await db.insert(users).values({
-              ...testUser,
-              password: hashedPwd,
-            });
-          }
-        }
-      }
 
       req.login(newUser, (err) => {
         if (err) {
           return next(err);
         }
-        return res.json({ message: "Registration successful", user: newUser });
+        return res.json({
+          message: "Registration successful",
+          user: newUser,
+        });
       });
     } catch (error) {
       next(error);
@@ -217,7 +167,10 @@ export function setupAuth(app: Express) {
           return next(err);
         }
 
-        return res.json({ message: "Login successful", user });
+        return res.json({
+          message: "Login successful",
+          user,
+        });
       });
     })(req, res, next);
   });
