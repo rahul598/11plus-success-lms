@@ -2,7 +2,6 @@ import { Switch, Route } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
-import { Header } from "@/components/header";
 import NotFound from "@/pages/not-found";
 import HomePage from "@/pages/home";
 import MockExamsPage from "@/pages/mock-exams";
@@ -62,7 +61,6 @@ function Router() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header />
       <main className="flex-1">
         <Switch>
           <Route path="/" component={HomePage} />
@@ -113,15 +111,17 @@ function Router() {
                 </>
               )}
 
-              {/* Redirect to appropriate dashboard if role doesn't match */}
+              {/* Redirect to appropriate dashboard if accessing wrong routes */}
               <Route>
                 {() => {
-                  window.location.href = getDashboardRoute(user.role);
+                  const correctDashboard = getDashboardRoute(user.role);
+                  window.location.href = correctDashboard;
                   return null;
                 }}
               </Route>
             </>
           ) : (
+            // Redirect to login if not authenticated
             <Route>
               {() => {
                 window.location.href = "/auth/login";
