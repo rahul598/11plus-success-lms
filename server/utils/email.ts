@@ -1,19 +1,19 @@
 import nodemailer from 'nodemailer';
 
-// Create a test account using Ethereal for development
+// Create SMTP transporter using environment variables
 const transporter = nodemailer.createTransport({
-  host: 'smtp.ethereal.email',
-  port: 587,
+  host: process.env.SMTP_HOST || 'mail.kafilontech.com',
+  port: parseInt(process.env.SMTP_PORT || '587'),
   secure: false,
   auth: {
-    user: process.env.EMAIL_USER || 'demo@ethereal.email',
-    pass: process.env.EMAIL_PASS || 'demo123'
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS
   }
 });
 
 export async function sendWelcomeEmail(email: string, name: string) {
   const mailOptions = {
-    from: '"Educational Platform" <noreply@eduplatform.com>',
+    from: '"Educational Platform" <test@kafilontech.com>',
     to: email,
     subject: 'Welcome to Our Educational Platform!',
     html: `
