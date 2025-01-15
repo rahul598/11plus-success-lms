@@ -1,28 +1,34 @@
 import { Button } from "@/components/ui/button";
+import { ArrowRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowRight, Star, Book, UserCheck, CheckCircle2 } from "lucide-react";
+import { Star, Book, UserCheck, CheckCircle2 } from "lucide-react";
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-[#E6FAF8]">
       {/* Hero Section */}
-      <section className="bg-[#1A1A1A] text-white py-24">
+      <section className="pt-32 pb-20 relative">
         <div className="container mx-auto px-4">
           <div className="max-w-2xl mx-auto text-center">
-            <h1 className="text-5xl font-bold mb-6">
-              Your Path to 11 Plus Success Starts Here
+            <h1 className="text-5xl font-bold mb-6 text-[#2D3648]">
+              Step Up Your Game For the 11+ Exams
             </h1>
-            <p className="text-xl mb-8">
-              Comprehensive preparation for grammar and independent school entrance exams
+            <p className="text-xl mb-8 text-[#545F71]">
+              Unique Approaches To Teaching Combined Technology & Learning
             </p>
-            <Button 
+            <Button
               size="lg"
-              className="bg-[#FF6B00] hover:bg-[#FF8533] text-white px-8 py-6 text-lg rounded-lg"
+              className="bg-[#00AA9B] hover:bg-[#008F82] text-white px-8 py-6 text-lg rounded-full"
             >
-              Start Free Trial
+              Get Started
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </div>
+        </div>
+
+        {/* Decorative elements */}
+        <div className="absolute top-0 left-0 w-32 h-32">
+          {/* We'll add the decorative images later */}
         </div>
       </section>
 
@@ -37,18 +43,21 @@ export default function HomePage() {
               {
                 icon: Star,
                 title: "Expert Tutors",
-                description: "Learn from experienced teachers who understand the exam requirements"
+                description:
+                  "Learn from experienced teachers who understand the exam requirements",
               },
               {
                 icon: Book,
                 title: "Comprehensive Resources",
-                description: "Access a wide range of practice papers and study materials"
+                description:
+                  "Access a wide range of practice papers and study materials",
               },
               {
                 icon: UserCheck,
                 title: "Personalized Learning",
-                description: "Get customized study plans tailored to your needs"
-              }
+                description:
+                  "Get customized study plans tailored to your needs",
+              },
             ].map((feature, index) => (
               <Card key={index} className="border-0 shadow-lg">
                 <CardContent className="p-6">
@@ -94,7 +103,7 @@ export default function HomePage() {
               "Regular mock tests and assessments",
               "Detailed performance analytics and feedback",
               "Interactive learning materials and video lessons",
-              "Expert support whenever you need it"
+              "Expert support whenever you need it",
             ].map((benefit, index) => (
               <div key={index} className="flex items-center mb-6">
                 <CheckCircle2 className="h-6 w-6 text-[#FF6B00] mr-4 flex-shrink-0" />
@@ -112,9 +121,10 @@ export default function HomePage() {
             Ready to Start Your Journey?
           </h2>
           <p className="text-xl mb-8 max-w-2xl mx-auto">
-            Join thousands of successful students who have achieved their goals with 11 Plus Success
+            Join thousands of successful students who have achieved their goals
+            with 11 Plus Success
           </p>
-          <Button 
+          <Button
             size="lg"
             className="bg-[#FF6B00] hover:bg-[#FF8533] text-white px-8 py-6 text-lg rounded-lg"
           >
