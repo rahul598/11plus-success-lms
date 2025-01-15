@@ -30,8 +30,10 @@ export function Header() {
 
   const handleLogout = async () => {
     try {
-      await logout();
-      setLocation('/auth/login');
+      const result = await logout();
+      if (result.ok) {
+        setLocation('/auth/login');
+      }
     } catch (error) {
       console.error('Logout failed:', error);
     }
@@ -85,7 +87,7 @@ export function Header() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end">
-                  <DropdownMenuItem onClick={() => setLocation('/dashboard')}>
+                  <DropdownMenuItem onClick={() => setLocation('/dashboard/parent')}>
                     <User className="mr-2 h-4 w-4" />
                     Profile
                   </DropdownMenuItem>
@@ -151,7 +153,7 @@ export function Header() {
               </Link>
               {user ? (
                 <>
-                  <Link href="/dashboard" onClick={() => setIsMenuOpen(false)} className="text-[#2D3648] hover:text-[#00AA9B] font-medium px-4">
+                  <Link href="/dashboard/parent" onClick={() => setIsMenuOpen(false)} className="text-[#2D3648] hover:text-[#00AA9B] font-medium px-4">
                     Profile
                   </Link>
                   <button
