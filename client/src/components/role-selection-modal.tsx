@@ -87,12 +87,12 @@ export function RoleSelectionModal({ isOpen, onClose, userId }: RoleSelectionMod
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+    <Dialog open={isOpen} onOpenChange={() => {}}>
+      <DialogContent className="sm:max-w-[425px]" onEscapeKeyDown={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>Choose Your Role</DialogTitle>
           <DialogDescription>
-            Select how you'll be using our platform. You can't change this later.
+            Select how you'll be using our platform. This is required to continue.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -111,17 +111,11 @@ export function RoleSelectionModal({ isOpen, onClose, userId }: RoleSelectionMod
             </div>
           ))}
         </div>
-        <div className="flex justify-end gap-3">
-          <Button
-            variant="outline"
-            onClick={onClose}
-            disabled={isLoading}
-          >
-            Cancel
-          </Button>
+        <div className="flex justify-end">
           <Button
             onClick={handleRoleSelect}
             disabled={!selectedRole || isLoading}
+            className="w-full"
           >
             {isLoading ? "Setting role..." : "Continue"}
           </Button>
