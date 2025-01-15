@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Form,
   FormControl,
@@ -20,8 +19,8 @@ import { useToast } from "@/hooks/use-toast";
 import { FaGoogle, FaFacebook } from 'react-icons/fa';
 
 const formSchema = z.object({
-  email: z.string().email({
-    message: "Please enter a valid email address.",
+  username: z.string().min(3, {
+    message: "Username must be at least 3 characters.",
   }),
   password: z.string().min(6, {
     message: "Password must be at least 6 characters.",
@@ -36,7 +35,7 @@ export default function LoginPage() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      email: "",
+      username: "",
       password: "",
     },
   });
@@ -50,15 +49,18 @@ export default function LoginPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(values),
+        credentials: 'include'
       });
 
       if (!response.ok) {
         throw new Error(await response.text());
       }
 
+      const data = await response.json();
+
       toast({
         title: "Success",
-        description: "Successfully logged in!",
+        description: data.message || "Successfully logged in!",
       });
 
       setLocation("/");
@@ -84,7 +86,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-primary flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="bg-white rounded-xl shadow-lg p-6 space-y-6">
           <div className="space-y-2">
@@ -135,12 +137,12 @@ export default function LoginPage() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
-                name="email"
+                name="username"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>Username</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter your email" {...field} />
+                      <Input placeholder="Enter your username" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

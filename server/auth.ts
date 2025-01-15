@@ -8,7 +8,6 @@ import { promisify } from "util";
 import { users } from "@db/schema";
 import { db } from "@db";
 import { eq } from "drizzle-orm";
-import { sendWelcomeEmail } from "./utils/email";
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -107,83 +106,6 @@ export function setupAuth(app: Express) {
       done(null, user);
     } catch (err) {
       done(err);
-    }
-  });
-
-  // Store temporary registration data in session instead of creating user
-  app.post("/api/register", async (req, res) => {
-    try {
-      const { username, password, email, name } = req.body;
-
-      // Check if user already exists
-      const [existingUser] = await db
-        .select()
-        .from(users)
-        .where(eq(users.username, username))
-        .limit(1);
-
-      if (existingUser) {
-        return res.status(400).send("Username already exists");
-      }
-
-      // Hash the password
-      const hashedPassword = await crypto.hash(password);
-
-      // Store registration data in session
-      req.session.registration = {
-        username,
-        password: hashedPassword,
-        email,
-        name,
-      };
-
-      res.json({
-        message: "Please select your role to complete registration",
-      });
-    } catch (error) {
-      res.status(500).send("Registration failed");
-    }
-  });
-
-  // Role selection endpoint that completes registration
-  app.post("/api/user/role", async (req, res) => {
-    try {
-      const { role } = req.body;
-      const registration = req.session.registration;
-
-      if (!registration) {
-        return res.status(400).send("Please complete registration first");
-      }
-
-      // Create the new user with selected role
-      const [newUser] = await db
-        .insert(users)
-        .values({
-          username: registration.username,
-          password: registration.password,
-          email: registration.email,
-          name: registration.name,
-          role: role,
-        })
-        .returning();
-
-      // Clear registration data from session
-      delete req.session.registration;
-
-      // Send welcome email
-      await sendWelcomeEmail(registration.email, registration.name);
-
-      req.login(newUser, (err) => {
-        if (err) {
-          return res.status(500).send("Login failed after registration");
-        }
-        return res.json({
-          message: "Registration completed successfully",
-          user: newUser,
-        });
-      });
-    } catch (error) {
-      res.status(500).send("Failed to set role");
     }
   });
 
