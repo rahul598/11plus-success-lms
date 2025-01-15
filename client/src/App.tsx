@@ -27,6 +27,7 @@ import RecordedClasses from "@/pages/dashboard/classes/recorded";
 import ClassSchedule from "@/pages/dashboard/classes/schedule";
 import Quizzes from "@/pages/dashboard/quizzes";
 import QuizQuestions from "@/pages/dashboard/quizzes/[id]/questions";
+import MockTestQuestions from "@/pages/dashboard/mock-tests/[id]/questions";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, isLoading } = useUser();
@@ -61,6 +62,7 @@ function Router() {
       <Route path="/dashboard/courses" component={() => <ProtectedRoute component={Courses} />} />
       <Route path="/dashboard/settings" component={() => <ProtectedRoute component={Settings} />} />
       <Route path="/dashboard/mock-tests" component={() => <ProtectedRoute component={MockTests} />} />
+      <Route path="/dashboard/mock-tests/:id/questions" component={() => <ProtectedRoute component={MockTestQuestions} />} />
       <Route path="/dashboard/products" component={() => <ProtectedRoute component={Products} />} />
       <Route path="/dashboard/products/categories" component={() => <ProtectedRoute component={ProductCategories} />} />
       <Route path="/dashboard/products/orders" component={() => <ProtectedRoute component={ProductOrders} />} />
