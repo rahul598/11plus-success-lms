@@ -7,6 +7,8 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   email: text("email").unique().notNull(),
   role: text("role", { enum: ["admin", "tutor", "student"] }).default("student").notNull(),
+  fcmToken: text("fcm_token"),
+  hasActiveSubscription: boolean("has_active_subscription").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   lastLogin: timestamp("last_login"),
 });
@@ -544,3 +546,68 @@ export const insertQuizQuestionSchema = createInsertSchema(quizQuestions);
 export const selectQuizQuestionSchema = createSelectSchema(quizQuestions);
 export type InsertQuizQuestion = typeof quizQuestions.$inferInsert;
 export type SelectQuizQuestion = typeof quizQuestions.$inferSelect;
+
+
+export const liveClasses = pgTable("live_classes", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description"),
+  tutorId: integer("tutor_id").references(() => tutors.id).notNull(),
+  courseId: integer("course_id").references(() => courses.id),
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time").notNull(),
+  meetingLink: text("meeting_link"),
+  googleCalendarEventId: text("google_calendar_event_id"),
+  status: text("status", {
+    enum: ["scheduled", "in_progress", "completed", "cancelled"]
+  }).notNull().default("scheduled"),
+  recordingUrl: text("recording_url"),
+  maxParticipants: integer("max_participants"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const classParticipants = pgTable("class_participants", {
+  id: serial("id").primaryKey(),
+  classId: integer("class_id").references(() => liveClasses.id).notNull(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  status: text("status", {
+    enum: ["registered", "attended", "absent"]
+  }).notNull().default("registered"),
+  notificationSent: boolean("notification_sent").default(false).notNull(),
+  joinedAt: timestamp("joined_at"),
+  leftAt: timestamp("left_at"),
+  feedback: text("feedback"),
+  rating: integer("rating"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const recordedVideos = pgTable("recorded_videos", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description"),
+  tutorId: integer("tutor_id").references(() => tutors.id).notNull(),
+  courseId: integer("course_id").references(() => courses.id),
+  videoUrl: text("video_url").notNull(),
+  duration: integer("duration"), // in seconds
+  thumbnail: text("thumbnail"),
+  isPublic: boolean("is_public").default(false).notNull(),
+  viewCount: integer("view_count").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertLiveClassSchema = createInsertSchema(liveClasses);
+export const selectLiveClassSchema = createSelectSchema(liveClasses);
+export type InsertLiveClass = typeof liveClasses.$inferInsert;
+export type SelectLiveClass = typeof liveClasses.$inferSelect;
+
+export const insertClassParticipantSchema = createInsertSchema(classParticipants);
+export const selectClassParticipantSchema = createSelectSchema(classParticipants);
+export type InsertClassParticipant = typeof classParticipants.$inferInsert;
+export type SelectClassParticipant = typeof classParticipants.$inferSelect;
+
+export const insertRecordedVideoSchema = createInsertSchema(recordedVideos);
+export const selectRecordedVideoSchema = createSelectSchema(recordedVideos);
+export type InsertRecordedVideo = typeof recordedVideos.$inferInsert;
+export type SelectRecordedVideo = typeof recordedVideos.$inferSelect;

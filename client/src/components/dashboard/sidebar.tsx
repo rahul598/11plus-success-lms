@@ -26,7 +26,10 @@ import {
   LineChart,
   Crown,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Video,
+  Calendar,
+  Image
 } from "lucide-react";
 
 interface SubscriptionFeatures {
@@ -53,6 +56,15 @@ const adminNavigation: NavigationItem[] = [
   { name: "Users", href: "/dashboard/users", icon: Users },
   { name: "Questions", href: "/dashboard/questions", icon: BookOpen },
   {
+    name: "Class Management",
+    icon: Calendar,
+    children: [
+      { name: "Live Classes", href: "/dashboard/classes/live", icon: Video },
+      { name: "Recorded Videos", href: "/dashboard/classes/recorded", icon: Video },
+      { name: "Schedule", href: "/dashboard/classes/schedule", icon: Calendar }
+    ]
+  },
+  {
     name: "E-Commerce",
     icon: ShoppingCart,
     children: [
@@ -61,6 +73,7 @@ const adminNavigation: NavigationItem[] = [
       { name: "Orders", href: "/dashboard/products/orders", icon: FileText }
     ]
   },
+  { name: "Media Library", href: "/dashboard/media", icon: Image },
   { name: "Subscriptions", href: "/dashboard/subscriptions", icon: Crown },
   { name: "Payments", href: "/dashboard/payments", icon: CreditCard },
   { name: "Tutors", href: "/dashboard/tutors", icon: GraduationCap },
@@ -73,9 +86,9 @@ const tutorNavigation: NavigationItem[] = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "My Students", href: "/dashboard/students", icon: Users },
   { name: "Questions", href: "/dashboard/questions", icon: BookOpen },
-  { 
-    name: "Mock Tests", 
-    href: "/dashboard/mock-tests", 
+  {
+    name: "Mock Tests",
+    href: "/dashboard/mock-tests",
     icon: Clock,
     requiredFeature: "mockTests"
   },
@@ -85,28 +98,28 @@ const tutorNavigation: NavigationItem[] = [
 
 const studentNavigation: NavigationItem[] = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { 
-    name: "My Courses", 
-    href: "/dashboard/my-courses", 
+  {
+    name: "My Courses",
+    href: "/dashboard/my-courses",
     icon: BookMarked,
     requiredFeature: "studyMaterials"
   },
-  { 
-    name: "Mock Tests", 
-    href: "/dashboard/mock-tests", 
+  {
+    name: "Mock Tests",
+    href: "/dashboard/mock-tests",
     icon: Clock,
     requiredFeature: "mockTests"
   },
-  { 
-    name: "Progress", 
-    href: "/dashboard/progress", 
+  {
+    name: "Progress",
+    href: "/dashboard/progress",
     icon: LineChart,
     requiredFeature: "analysisReports"
   },
-  { 
-    name: "Achievements", 
-    href: "/dashboard/achievements", 
-    icon: Award 
+  {
+    name: "Achievements",
+    href: "/dashboard/achievements",
+    icon: Award
   },
   { name: "My Subscription", href: "/dashboard/my-subscription", icon: Crown },
   { name: "Profile", href: "/dashboard/profile", icon: UserCircle },
@@ -126,8 +139,8 @@ export function Sidebar() {
       : studentNavigation;
 
   const toggleMenu = (menuName: string) => {
-    setOpenMenus(prev => 
-      prev.includes(menuName) 
+    setOpenMenus(prev =>
+      prev.includes(menuName)
         ? prev.filter(name => name !== menuName)
         : [...prev, menuName]
     );
@@ -228,10 +241,10 @@ export function Sidebar() {
       )}
     >
       <div className="flex h-14 items-center border-b px-3">
-        <div className={cn("overflow-hidden transition-all duration-300", 
+        <div className={cn("overflow-hidden transition-all duration-300",
           isOpen ? "w-40" : "w-0")}>
-          <img 
-            src="https://vinsonedge.com/wp-content/uploads/2025/01/Logo-3.png" 
+          <img
+            src="https://vinsonedge.com/wp-content/uploads/2025/01/Logo-3.png"
             alt="Vinsonedge Logo"
             className="h-8 brightness-0 invert"
           />
