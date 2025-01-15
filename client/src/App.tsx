@@ -14,6 +14,9 @@ import LoginPage from "@/pages/auth/login";
 import SignupPage from "@/pages/auth/signup";
 import CartPage from "@/pages/cart";
 import CheckoutPage from "@/pages/checkout";
+import StudentDashboard from "@/pages/dashboard/student";
+import ParentDashboard from "@/pages/dashboard/parent";
+import TutorDashboard from "@/pages/dashboard/tutor";
 
 function Router() {
   return (
@@ -28,6 +31,9 @@ function Router() {
       <Route path="/auth/signup" component={SignupPage} />
       <Route path="/cart" component={CartPage} />
       <Route path="/checkout" component={CheckoutPage} />
+      <Route path="/dashboard/student" component={StudentDashboard} />
+      <Route path="/dashboard/parent" component={ParentDashboard} />
+      <Route path="/dashboard/tutor" component={TutorDashboard} />
       <Route component={NotFound} />
     </Switch>
   );

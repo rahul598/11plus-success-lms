@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Form,
   FormControl,
@@ -18,6 +17,7 @@ import { Link } from "wouter";
 import { ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { FaGoogle, FaFacebook } from 'react-icons/fa';
+import { RoleSelectionModal } from "@/components/role-selection-modal";
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -39,6 +39,8 @@ export default function SignupPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [userId, setUserId] = useState<number>();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -65,12 +67,16 @@ export default function SignupPage() {
         throw new Error(await response.text());
       }
 
+      const data = await response.json();
+      setUserId(data.user.id);
+
       toast({
         title: "Success",
         description: "Account created successfully!",
       });
 
-      setLocation("/auth/login");
+      // Show role selection modal instead of redirecting
+      setShowRoleModal(true);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -83,12 +89,10 @@ export default function SignupPage() {
   }
 
   const handleGoogleSignup = () => {
-    // TODO: Implement Google signup
     window.location.href = '/api/auth/google';
   };
 
   const handleFacebookSignup = () => {
-    // TODO: Implement Facebook signup
     window.location.href = '/api/auth/facebook';
   };
 
@@ -214,6 +218,12 @@ export default function SignupPage() {
           </div>
         </div>
       </div>
+
+      <RoleSelectionModal 
+        isOpen={showRoleModal} 
+        onClose={() => setShowRoleModal(false)}
+        userId={userId}
+      />
     </div>
   );
 }
