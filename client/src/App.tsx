@@ -28,7 +28,7 @@ import CheckoutPage from "@/pages/checkout";
 import StudentDashboard from "@/pages/dashboard/student";
 import ParentDashboard from "@/pages/dashboard/parent";
 import TutorDashboard from "@/pages/dashboard/tutor";
-
+import { useEffect } from "react";
 
 function getDashboardRoute(role?: string) {
   switch (role) {
@@ -48,6 +48,15 @@ function getDashboardRoute(role?: string) {
 function Router() {
   const { user, isLoading } = useUser();
   const [location, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (user) {
+      const dashboardRoute = getDashboardRoute(user.role);
+      if (location === "/" || location === "/auth/login") {
+        setLocation(dashboardRoute);
+      }
+    }
+  }, [user, location, setLocation]);
 
   if (isLoading) {
     return (
