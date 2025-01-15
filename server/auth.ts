@@ -79,13 +79,6 @@ export function setupAuth(app: Express) {
         if (!isMatch) {
           return done(null, false, { message: "Incorrect password." });
         }
-
-        // Update last login
-        await db
-          .update(users)
-          .set({ lastLogin: new Date() })
-          .where(eq(users.id, user.id));
-
         return done(null, user);
       } catch (err) {
         return done(err);
@@ -110,7 +103,6 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // Store temporary registration data in session
   app.post("/api/register", async (req, res) => {
     try {
       const { username, password, email, name, role } = req.body;
@@ -141,25 +133,29 @@ export function setupAuth(app: Express) {
         })
         .returning();
 
-      // Send welcome email
-      const emailSent = await sendWelcomeEmail(email, name);
-      if (!emailSent) {
-        console.warn(`Failed to send welcome email to ${email}`);
+      // Try to send welcome email
+      try {
+        await sendWelcomeEmail(email, name);
+      } catch (emailError) {
+        console.error('Failed to send welcome email:', emailError);
+        // Continue with registration but notify the user about email issue
       }
 
       // Log the user in
       req.login(newUser, (err) => {
         if (err) {
+          console.error("Login error after registration:", err);
           return res.status(500).send("Login failed after registration");
         }
+
         return res.json({
-          message: "Registration completed successfully",
+          message: "Registration completed successfully. Welcome email will be sent shortly.",
           user: newUser,
         });
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Registration error:", error);
-      res.status(500).send("Registration failed");
+      res.status(500).send(error.message || "Registration failed");
     }
   });
 
