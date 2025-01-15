@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Link } from "wouter";
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -24,36 +25,37 @@ export function Header() {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
-          <motion.a 
-            href="/"
+          <motion.div 
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             className="flex items-center"
           >
-            <img 
-              src="https://vinsonedge.com/wp-content/uploads/2025/01/Logo-3.png" 
-              alt="11Plus Success" 
-              className="h-12"
-            />
-          </motion.a>
+            <Link href="/">
+              <img 
+                src="https://vinsonedge.com/wp-content/uploads/2025/01/Logo-3.png" 
+                alt="11Plus Success" 
+                className="h-12 cursor-pointer"
+              />
+            </Link>
+          </motion.div>
 
           {/* Navigation Links - Hidden on Mobile */}
           <nav className="hidden md:flex items-center space-x-8">
-            <a href="/mock-exams" className="text-[#2D3648] hover:text-[#00AA9B] font-medium">
+            <Link href="/mock-exams" className="text-[#2D3648] hover:text-[#00AA9B] font-medium">
               Mock Exams
-            </a>
-            <a href="/reports" className="text-[#2D3648] hover:text-[#00AA9B] font-medium">
+            </Link>
+            <Link href="/reports" className="text-[#2D3648] hover:text-[#00AA9B] font-medium">
               Reports
-            </a>
-            <a href="/tution" className="text-[#2D3648] hover:text-[#00AA9B] font-medium">
+            </Link>
+            <Link href="/tution" className="text-[#2D3648] hover:text-[#00AA9B] font-medium">
               Tution
-            </a>
-            <a href="/about-us" className="text-[#2D3648] hover:text-[#00AA9B] font-medium">
+            </Link>
+            <Link href="/about-us" className="text-[#2D3648] hover:text-[#00AA9B] font-medium">
               About Us
-            </a>
-            <a href="/contact-us" className="text-[#2D3648] hover:text-[#00AA9B] font-medium">
+            </Link>
+            <Link href="/contact-us" className="text-[#2D3648] hover:text-[#00AA9B] font-medium">
               Contact Us
-            </a>
+            </Link>
           </nav>
 
           {/* Right side icons */}
@@ -100,21 +102,21 @@ export function Header() {
               className="md:hidden bg-white"
             >
               <nav className="flex flex-col space-y-4 py-4">
-                <a href="/mock-exams" className="text-[#2D3648] hover:text-[#00AA9B] font-medium px-4">
+                <Link href="/mock-exams" onClick={() => setIsMenuOpen(false)} className="text-[#2D3648] hover:text-[#00AA9B] font-medium px-4">
                   Mock Exams
-                </a>
-                <a href="/reports" className="text-[#2D3648] hover:text-[#00AA9B] font-medium px-4">
+                </Link>
+                <Link href="/reports" onClick={() => setIsMenuOpen(false)} className="text-[#2D3648] hover:text-[#00AA9B] font-medium px-4">
                   Reports
-                </a>
-                <a href="/tution" className="text-[#2D3648] hover:text-[#00AA9B] font-medium px-4">
+                </Link>
+                <Link href="/tution" onClick={() => setIsMenuOpen(false)} className="text-[#2D3648] hover:text-[#00AA9B] font-medium px-4">
                   Tution
-                </a>
-                <a href="/about-us" className="text-[#2D3648] hover:text-[#00AA9B] font-medium px-4">
+                </Link>
+                <Link href="/about-us" onClick={() => setIsMenuOpen(false)} className="text-[#2D3648] hover:text-[#00AA9B] font-medium px-4">
                   About Us
-                </a>
-                <a href="/contact-us" className="text-[#2D3648] hover:text-[#00AA9B] font-medium px-4">
+                </Link>
+                <Link href="/contact-us" onClick={() => setIsMenuOpen(false)} className="text-[#2D3648] hover:text-[#00AA9B] font-medium px-4">
                   Contact Us
-                </a>
+                </Link>
                 <div className="flex flex-col space-y-2 px-4">
                   <Button 
                     variant="outline"
