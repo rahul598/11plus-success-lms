@@ -2,7 +2,7 @@ import nodemailer from 'nodemailer';
 
 // Create SMTP transporter using environment variables
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'mail.kafilontech.com',
+  host: process.env.SMTP_HOST,
   port: parseInt(process.env.SMTP_PORT || '587'),
   secure: false, // Use STARTTLS
   auth: {
@@ -10,17 +10,15 @@ const transporter = nodemailer.createTransport({
     pass: process.env.SMTP_PASS
   },
   tls: {
-    rejectUnauthorized: false, // Accept self-signed certificates
-    ciphers: 'SSLv3'
-  },
-  debug: true // Enable debug logging
+    rejectUnauthorized: false // Accept self-signed certificates
+  }
 });
 
 export async function sendWelcomeEmail(email: string, name: string) {
   const mailOptions = {
-    from: '"11Plus-Success" <test@kafilontech.com>',
+    from: process.env.SMTP_USER,
     to: email,
-    subject: 'Welcome to 11Plus-Success!',
+    subject: 'Welcome to our Education Platform!',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #2D3648;">Welcome ${name}! 🎉</h2>
@@ -33,7 +31,7 @@ export async function sendWelcomeEmail(email: string, name: string) {
           <li>Connect with expert tutors</li>
         </ul>
         <p>If you have any questions, feel free to reply to this email.</p>
-        <p>Best regards,<br>The 11Plus-Success Team</p>
+        <p>Best regards,<br>The Education Platform Team</p>
       </div>
     `
   };
@@ -58,7 +56,6 @@ export async function sendWelcomeEmail(email: string, name: string) {
     return true;
   } catch (error) {
     console.error('Error sending welcome email:', error);
-    // Continue with user registration even if email fails
     return false;
   }
 }

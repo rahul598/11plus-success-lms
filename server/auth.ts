@@ -8,6 +8,7 @@ import { promisify } from "util";
 import { users } from "@db/schema";
 import { db } from "@db";
 import { eq } from "drizzle-orm";
+import { sendWelcomeEmail } from "./utils/email";
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -106,6 +107,59 @@ export function setupAuth(app: Express) {
       done(null, user);
     } catch (err) {
       done(err);
+    }
+  });
+
+  // Store temporary registration data in session
+  app.post("/api/register", async (req, res) => {
+    try {
+      const { username, password, email, name, role } = req.body;
+
+      // Check if user already exists
+      const [existingUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.username, username))
+        .limit(1);
+
+      if (existingUser) {
+        return res.status(400).send("Username already exists");
+      }
+
+      // Hash the password
+      const hashedPassword = await crypto.hash(password);
+
+      // Create the new user
+      const [newUser] = await db
+        .insert(users)
+        .values({
+          username,
+          password: hashedPassword,
+          email,
+          name,
+          role,
+        })
+        .returning();
+
+      // Send welcome email
+      const emailSent = await sendWelcomeEmail(email, name);
+      if (!emailSent) {
+        console.warn(`Failed to send welcome email to ${email}`);
+      }
+
+      // Log the user in
+      req.login(newUser, (err) => {
+        if (err) {
+          return res.status(500).send("Login failed after registration");
+        }
+        return res.json({
+          message: "Registration completed successfully",
+          user: newUser,
+        });
+      });
+    } catch (error) {
+      console.error("Registration error:", error);
+      res.status(500).send("Registration failed");
     }
   });
 
