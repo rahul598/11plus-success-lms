@@ -12,6 +12,19 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useUser } from "@/hooks/use-user";
 
+function getDashboardRoute(role?: string) {
+  switch (role) {
+    case "student":
+      return "/dashboard/student";
+    case "tutor":
+      return "/dashboard/tutor";
+    case "parent":
+      return "/dashboard/parent";
+    default:
+      return "/auth/login";
+  }
+}
+
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -87,9 +100,9 @@ export function Header() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end">
-                  <DropdownMenuItem onClick={() => setLocation('/dashboard/parent')}>
+                  <DropdownMenuItem onClick={() => setLocation(getDashboardRoute(user.role))}>
                     <User className="mr-2 h-4 w-4" />
-                    Profile
+                    Dashboard
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout}>
@@ -153,8 +166,12 @@ export function Header() {
               </Link>
               {user ? (
                 <>
-                  <Link href="/dashboard/parent" onClick={() => setIsMenuOpen(false)} className="text-[#2D3648] hover:text-[#00AA9B] font-medium px-4">
-                    Profile
+                  <Link 
+                    href={getDashboardRoute(user.role)} 
+                    onClick={() => setIsMenuOpen(false)} 
+                    className="text-[#2D3648] hover:text-[#00AA9B] font-medium px-4"
+                  >
+                    Dashboard
                   </Link>
                   <button
                     onClick={() => {

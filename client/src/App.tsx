@@ -28,6 +28,19 @@ import ParentOrdersPage from "@/pages/dashboard/parent/orders";
 import ParentAddressesPage from "@/pages/dashboard/parent/addresses";
 import ParentSettingsPage from "@/pages/dashboard/parent/settings";
 
+function getDashboardRoute(role?: string) {
+  switch (role) {
+    case "student":
+      return "/dashboard/student";
+    case "tutor":
+      return "/dashboard/tutor";
+    case "parent":
+      return "/dashboard/parent";
+    default:
+      return "/auth/login";
+  }
+}
+
 function Router() {
   const { user, isLoading } = useUser();
 
@@ -58,24 +71,45 @@ function Router() {
           {/* Protected Routes - Only accessible when logged in */}
           {user ? (
             <>
-              <Route path="/dashboard/student" component={StudentDashboard} />
-              <Route path="/dashboard/parent" component={ParentDashboard} />
-              <Route path="/dashboard/tutor" component={TutorDashboard} />
+              {/* Student Dashboard */}
+              {user.role === "student" && (
+                <Route path="/dashboard/student" component={StudentDashboard} />
+              )}
 
-              {/* Parent Dashboard Routes */}
-              <Route path="/dashboard/parent/profile" component={ParentProfilePage} />
-              <Route path="/dashboard/parent/progress" component={ParentProgressPage} />
-              <Route path="/dashboard/parent/schedule" component={ParentSchedulePage} />
-              <Route path="/dashboard/parent/messages" component={ParentMessagesPage} />
-              <Route path="/dashboard/parent/orders" component={ParentOrdersPage} />
-              <Route path="/dashboard/parent/addresses" component={ParentAddressesPage} />
-              <Route path="/dashboard/parent/settings" component={ParentSettingsPage} />
+              {/* Tutor Dashboard */}
+              {user.role === "tutor" && (
+                <Route path="/dashboard/tutor" component={TutorDashboard} />
+              )}
+
+              {/* Parent Dashboard */}
+              {user.role === "parent" && (
+                <>
+                  <Route path="/dashboard/parent" component={ParentDashboard} />
+                  <Route path="/dashboard/parent/profile" component={ParentProfilePage} />
+                  <Route path="/dashboard/parent/progress" component={ParentProgressPage} />
+                  <Route path="/dashboard/parent/schedule" component={ParentSchedulePage} />
+                  <Route path="/dashboard/parent/messages" component={ParentMessagesPage} />
+                  <Route path="/dashboard/parent/orders" component={ParentOrdersPage} />
+                  <Route path="/dashboard/parent/addresses" component={ParentAddressesPage} />
+                  <Route path="/dashboard/parent/settings" component={ParentSettingsPage} />
+                </>
+              )}
+
+              {/* Redirect to appropriate dashboard if role doesn't match */}
+              <Route>
+                {() => {
+                  window.location.href = getDashboardRoute(user.role);
+                  return null;
+                }}
+              </Route>
             </>
           ) : (
-            <Route component={() => {
-              window.location.href = "/auth/login";
-              return null;
-            }} />
+            <Route>
+              {() => {
+                window.location.href = "/auth/login";
+                return null;
+              }}
+            </Route>
           )}
 
           <Route component={NotFound} />
