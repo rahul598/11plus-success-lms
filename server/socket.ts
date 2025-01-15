@@ -6,7 +6,7 @@ interface ChatMessage {
   message: string;
   from: string;
   timestamp: string;
-  to?: string; // For private messages
+  to?: string;
 }
 
 interface Notification {
@@ -21,12 +21,22 @@ interface ServerToClientEvents {
   notification: (data: Notification) => void;
   chatMessage: (data: ChatMessage) => void;
   userStatus: (data: { userId: number; status: "online" | "offline" }) => void;
+  // WebRTC specific events
+  userJoinedRoom: (data: { userId: string; signal: any }) => void;
+  userLeftRoom: (userId: string) => void;
+  receivingSignal: (data: { userId: string; signal: any }) => void;
+  error: (error: string) => void;
 }
 
 interface ClientToServerEvents {
   sendMessage: (message: string, to?: string) => void;
   markNotificationRead: (notificationId: string) => void;
   authenticate: (user: SelectUser) => void;
+  // WebRTC specific events
+  joinRoom: (data: { roomId: string; isTeacher: boolean }) => void;
+  leaveRoom: (roomId: string) => void;
+  sendSignal: (data: { signal: any; userId: string }) => void;
+  returningSignal: (data: { signal: any; userId: string }) => void;
 }
 
 export function setupWebSocketServer(httpServer: Server) {
@@ -40,6 +50,7 @@ export function setupWebSocketServer(httpServer: Server) {
   // Store active users and their socket IDs
   const activeUsers = new Map<string, SelectUser>();
   const userSockets = new Map<number, string>();
+  const rooms = new Map<string, Set<string>>(); // Store room participants
 
   io.on("connection", (socket) => {
     console.log("New client connected:", socket.id);
@@ -58,13 +69,11 @@ export function setupWebSocketServer(httpServer: Server) {
           timestamp: new Date().toISOString(),
         });
 
-        // Broadcast user status
         socket.broadcast.emit("userStatus", {
           userId: user.id,
           status: "online"
         });
 
-        // Send welcome notification to the user
         socket.emit("notification", {
           id: `welcome-${Date.now()}`,
           message: `Welcome back, ${user.username}!`,
@@ -74,6 +83,60 @@ export function setupWebSocketServer(httpServer: Server) {
       } catch (error) {
         console.error("Authentication error:", error);
       }
+    });
+
+    // Handle joining a room
+    socket.on("joinRoom", ({ roomId, isTeacher }) => {
+      try {
+        socket.join(roomId);
+        const room = rooms.get(roomId) || new Set();
+        room.add(socket.id);
+        rooms.set(roomId, room);
+
+        // Notify existing users in the room about the new peer
+        socket.to(roomId).emit("userJoinedRoom", {
+          userId: socket.id,
+          signal: null // Initial signal will be sent later
+        });
+
+        console.log(`User ${socket.id} joined room ${roomId}`);
+      } catch (error) {
+        console.error("Error joining room:", error);
+        socket.emit("error", "Failed to join room");
+      }
+    });
+
+    // Handle leaving a room
+    socket.on("leaveRoom", (roomId) => {
+      try {
+        socket.leave(roomId);
+        const room = rooms.get(roomId);
+        if (room) {
+          room.delete(socket.id);
+          if (room.size === 0) {
+            rooms.delete(roomId);
+          }
+        }
+        socket.to(roomId).emit("userLeftRoom", socket.id);
+        console.log(`User ${socket.id} left room ${roomId}`);
+      } catch (error) {
+        console.error("Error leaving room:", error);
+      }
+    });
+
+    // Handle WebRTC signaling
+    socket.on("sendSignal", ({ signal, userId }) => {
+      io.to(userId).emit("receivingSignal", {
+        userId: socket.id,
+        signal
+      });
+    });
+
+    socket.on("returningSignal", ({ signal, userId }) => {
+      io.to(userId).emit("receivingSignal", {
+        userId: socket.id,
+        signal
+      });
     });
 
     // Handle chat messages
@@ -102,7 +165,7 @@ export function setupWebSocketServer(httpServer: Server) {
           const recipientSocket = userSockets.get(parseInt(to));
           if (recipientSocket) {
             io.to(recipientSocket).emit("chatMessage", chatMessage);
-            socket.emit("chatMessage", chatMessage); // Send to sender as well
+            socket.emit("chatMessage", chatMessage);
           }
         } else {
           // Broadcast to all
@@ -117,8 +180,6 @@ export function setupWebSocketServer(httpServer: Server) {
     socket.on("markNotificationRead", (notificationId: string) => {
       const user = activeUsers.get(socket.id);
       if (!user) return;
-
-      // Here you would typically update the notification status in the database
       console.log(`Notification ${notificationId} marked as read by ${user.username}`);
     });
 
@@ -134,7 +195,6 @@ export function setupWebSocketServer(httpServer: Server) {
           timestamp: new Date().toISOString(),
         });
 
-        // Broadcast user status
         socket.broadcast.emit("userStatus", {
           userId: user.id,
           status: "offline"
@@ -143,6 +203,17 @@ export function setupWebSocketServer(httpServer: Server) {
         // Clean up user data
         activeUsers.delete(socket.id);
         userSockets.delete(user.id);
+
+        // Clean up room participation
+        rooms.forEach((participants, roomId) => {
+          if (participants.has(socket.id)) {
+            participants.delete(socket.id);
+            if (participants.size === 0) {
+              rooms.delete(roomId);
+            }
+            socket.to(roomId).emit("userLeftRoom", socket.id);
+          }
+        });
       }
     });
   });

@@ -17,7 +17,6 @@ class WebRTCService {
   private roomId: string | null = null;
 
   constructor() {
-    // Initialize socket connection with error handling
     try {
       this.socket = io(window.location.origin, {
         path: '/ws',
@@ -43,30 +42,93 @@ class WebRTCService {
       console.error('Socket connection error:', error);
     });
 
-    this.socket.on('user-joined', ({ userId, signal }: { userId: string; signal: SignalData }) => {
+    this.socket.on('userJoinedRoom', ({ userId, signal }: { userId: string; signal: SignalData }) => {
       console.log('New user joined:', userId);
-      this.addPeer(signal, userId);
+      this.createPeer(userId, false);
     });
 
-    this.socket.on('user-left', (userId: string) => {
+    this.socket.on('userLeftRoom', (userId: string) => {
       console.log('User left:', userId);
       if (this.peers.has(userId)) {
         this.peers.get(userId)?.destroy();
         this.peers.delete(userId);
+
+        // Dispatch event to remove video element
+        window.dispatchEvent(new CustomEvent('peer-left', { detail: { userId } }));
       }
     });
 
-    this.socket.on('receiving-signal', ({ userId, signal }: { userId: string; signal: SignalData }) => {
+    this.socket.on('receivingSignal', ({ userId, signal }: { userId: string; signal: SignalData }) => {
       console.log('Received signal from user:', userId);
-      const peer = this.peers.get(userId);
-      if (peer) {
+      if (this.peers.has(userId)) {
         try {
-          peer.signal(signal);
+          this.peers.get(userId)?.signal(signal);
         } catch (error) {
           console.error('Error handling peer signal:', error);
         }
+      } else {
+        this.createPeer(userId, false, signal);
       }
     });
+
+    this.socket.on('error', (error: string) => {
+      console.error('WebRTC error:', error);
+    });
+  }
+
+  private createPeer(userId: string, initiator: boolean, incomingSignal?: SignalData) {
+    try {
+      if (!this.localStream) {
+        throw new Error('Local stream not available');
+      }
+
+      const peer = new Peer({
+        initiator,
+        trickle: false,
+        stream: this.localStream,
+        config: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:global.stun.twilio.com:3478' }
+          ]
+        }
+      });
+
+      peer.on('signal', (signal: SignalData) => {
+        if (initiator) {
+          this.socket.emit('sendSignal', { signal, userId });
+        } else {
+          this.socket.emit('returningSignal', { signal, userId });
+        }
+      });
+
+      peer.on('stream', (stream: MediaStream) => {
+        window.dispatchEvent(new CustomEvent('new-peer-stream', {
+          detail: { stream, userId }
+        }));
+      });
+
+      peer.on('error', (err) => {
+        console.error('Peer connection error:', err);
+        this.peers.delete(userId);
+      });
+
+      peer.on('close', () => {
+        console.log('Peer connection closed:', userId);
+        this.peers.delete(userId);
+        window.dispatchEvent(new CustomEvent('peer-left', { detail: { userId } }));
+      });
+
+      if (incomingSignal) {
+        peer.signal(incomingSignal);
+      }
+
+      this.peers.set(userId, peer);
+      return peer;
+    } catch (error) {
+      console.error('Error creating peer connection:', error);
+      throw error;
+    }
   }
 
   async joinRoom(roomId: string, isTeacher: boolean = false): Promise<MediaStream> {
@@ -84,7 +146,7 @@ class WebRTCService {
         audio: true
       });
 
-      this.socket.emit('join-room', { roomId, isTeacher });
+      this.socket.emit('joinRoom', { roomId, isTeacher });
       console.log('Successfully joined room:', roomId);
 
       return this.localStream;
@@ -94,56 +156,10 @@ class WebRTCService {
     }
   }
 
-  private addPeer(incomingSignal: SignalData, userId: string) {
-    if (!this.localStream) {
-      console.error('No local stream available');
-      return;
-    }
-
-    try {
-      const peer = new Peer({
-        initiator: false,
-        trickle: false,
-        stream: this.localStream,
-        config: {
-          iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:global.stun.twilio.com:3478' }
-          ]
-        }
-      });
-
-      peer.on('signal', (signal: SignalData) => {
-        this.socket.emit('returning-signal', { signal, userId });
-      });
-
-      peer.on('stream', (stream: MediaStream) => {
-        window.dispatchEvent(new CustomEvent('new-peer-stream', {
-          detail: { stream, userId }
-        }));
-      });
-
-      peer.on('error', (err) => {
-        console.error('Peer connection error:', err);
-        this.peers.delete(userId);
-      });
-
-      peer.on('close', () => {
-        console.log('Peer connection closed:', userId);
-        this.peers.delete(userId);
-      });
-
-      peer.signal(incomingSignal);
-      this.peers.set(userId, peer);
-    } catch (error) {
-      console.error('Error creating peer connection:', error);
-    }
-  }
-
   leaveRoom() {
     if (this.roomId) {
       console.log('Leaving room:', this.roomId);
-      this.socket.emit('leave-room', this.roomId);
+      this.socket.emit('leaveRoom', this.roomId);
 
       // Clean up media streams
       if (this.localStream) {
@@ -164,6 +180,25 @@ class WebRTCService {
       });
       this.peers.clear();
       this.roomId = null;
+
+      // Dispatch event to clear all remote videos
+      window.dispatchEvent(new CustomEvent('clear-remote-videos'));
+    }
+  }
+
+  toggleAudioTrack(enabled: boolean) {
+    if (this.localStream) {
+      this.localStream.getAudioTracks().forEach(track => {
+        track.enabled = enabled;
+      });
+    }
+  }
+
+  toggleVideoTrack(enabled: boolean) {
+    if (this.localStream) {
+      this.localStream.getVideoTracks().forEach(track => {
+        track.enabled = enabled;
+      });
     }
   }
 }
