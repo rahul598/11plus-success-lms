@@ -93,8 +93,6 @@ export function Header() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end">
-                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => setLocation('/dashboard')}>
                     <User className="mr-2 h-4 w-4" />
                     Dashboard
@@ -107,11 +105,11 @@ export function Header() {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <>
+              <div className="hidden md:flex items-center gap-2">
                 <Link href="/auth/login">
                   <Button 
                     variant="outline"
-                    className="hidden md:flex bg-[#00AA9B] text-white hover:bg-[#009488] border-none"
+                    className="bg-[#00AA9B] text-white hover:bg-[#009488] border-none"
                   >
                     Login
                   </Button>
@@ -119,18 +117,16 @@ export function Header() {
 
                 <Link href="/auth/signup">
                   <Button 
-                    className="hidden md:flex bg-[#32DBC9] text-white hover:bg-[#2BC4B4] border-none"
+                    className="bg-[#32DBC9] text-white hover:bg-[#2BC4B4] border-none"
                   >
                     Sign up
                   </Button>
                 </Link>
-              </>
+              </div>
             )}
 
             {/* Mobile menu button */}
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
+            <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="md:hidden p-2"
             >
@@ -139,7 +135,7 @@ export function Header() {
               ) : (
                 <Menu className="h-6 w-6 text-[#2D3648]" />
               )}
-            </motion.button>
+            </button>
           </div>
         </div>
 
