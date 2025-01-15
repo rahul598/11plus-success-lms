@@ -1,6 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { io, Socket } from "socket.io-client";
-import { useUser } from "@/hooks/use-user";
 
 interface SocketContextType {
   socket: Socket | null;
@@ -19,16 +18,12 @@ export function useSocket() {
 export function SocketProvider({ children }: { children: React.ReactNode }) {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  const { user } = useUser();
 
   useEffect(() => {
     const newSocket = io(window.location.origin);
 
     function onConnect() {
       setIsConnected(true);
-      if (user) {
-        newSocket.emit("authenticate", user);
-      }
     }
 
     function onDisconnect() {
@@ -45,10 +40,15 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       newSocket.off("disconnect", onDisconnect);
       newSocket.close();
     };
-  }, [user]);
+  }, []);
+
+  const value = {
+    socket,
+    isConnected,
+  };
 
   return (
-    <SocketContext.Provider value={{ socket, isConnected }}>
+    <SocketContext.Provider value={value}>
       {children}
     </SocketContext.Provider>
   );
