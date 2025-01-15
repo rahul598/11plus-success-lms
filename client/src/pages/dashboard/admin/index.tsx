@@ -1,10 +1,15 @@
 import { DashboardLayout } from "@/components/dashboard/layout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
   Users,
-  BookOpen,
   GraduationCap,
+  BookOpen,
   CreditCard,
 } from "lucide-react";
 
@@ -20,50 +25,59 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/stats"],
   });
 
-  const cards = [
-    {
-      title: "Total Users",
-      value: stats?.users || 0,
-      icon: Users,
-    },
-    {
-      title: "Total Questions",
-      value: stats?.questions || 0,
-      icon: BookOpen,
-    },
-    {
-      title: "Active Tutors",
-      value: stats?.tutors || 0,
-      icon: GraduationCap,
-    },
-    {
-      title: "Revenue",
-      value: `$${stats?.revenue || 0}`,
-      icon: CreditCard,
-    },
-  ];
-
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {cards.map((card) => {
-            const Icon = card.icon;
-            return (
-              <Card key={card.title}>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    {card.title}
-                  </CardTitle>
-                  <Icon className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{card.value}</div>
-                </CardContent>
-              </Card>
-            );
-          })}
+      <div className="flex flex-col gap-4">
+        <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats?.users || 0}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium">Questions</CardTitle>
+                <BookOpen className="h-4 w-4 text-muted-foreground" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats?.questions || 0}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium">Active Tutors</CardTitle>
+                <GraduationCap className="h-4 w-4 text-muted-foreground" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats?.tutors || 0}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                <CreditCard className="h-4 w-4 text-muted-foreground" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">${stats?.revenue || 0}</div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </DashboardLayout>
