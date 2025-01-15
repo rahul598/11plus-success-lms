@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Rowdies:wght@300;400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Rowdies:wght@300;400;700&family=Outfit:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -10,8 +10,8 @@
   }
 
   body {
-    @apply font-sans antialiased bg-background text-foreground;
-    font-family: 'Inter', sans-serif;
+    @apply font-body antialiased bg-background text-foreground;
+    font-family: 'Outfit', sans-serif;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -30,11 +30,29 @@
 }
 
 .button-gradient {
-  background: linear-gradient(90deg, #00AA9B 0%, #00D1BE 100%);
+  background: linear-gradient(90deg, #FF6B00 0%, #FF8533 100%);
+  transition: all 0.3s ease;
 }
 
 .button-gradient:hover {
-  background: linear-gradient(90deg, #009488 0%, #00BBA9 100%);
+  background: linear-gradient(90deg, #FF8533 0%, #FF6B00 100%);
+  transform: translateY(-2px);
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
 }
 
 .stats-card {
