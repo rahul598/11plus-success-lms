@@ -10,6 +10,8 @@ import ReportsPage from "@/pages/reports";
 import TutionPage from "@/pages/tution";
 import AboutUsPage from "@/pages/about-us";
 import ContactUsPage from "@/pages/contact-us";
+import LoginPage from "@/pages/auth/login";
+import SignupPage from "@/pages/auth/signup";
 
 function Router() {
   return (
@@ -20,6 +22,8 @@ function Router() {
       <Route path="/tution" component={TutionPage} />
       <Route path="/about-us" component={AboutUsPage} />
       <Route path="/contact-us" component={ContactUsPage} />
+      <Route path="/auth/login" component={LoginPage} />
+      <Route path="/auth/signup" component={SignupPage} />
       <Route component={NotFound} />
     </Switch>
   );
