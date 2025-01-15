@@ -18,6 +18,15 @@ import StudentDashboard from "@/pages/dashboard/student";
 import ParentDashboard from "@/pages/dashboard/parent";
 import TutorDashboard from "@/pages/dashboard/tutor";
 
+// Parent Dashboard Pages
+import ParentProfilePage from "@/pages/dashboard/parent/profile";
+import ParentProgressPage from "@/pages/dashboard/parent/progress";
+import ParentSchedulePage from "@/pages/dashboard/parent/schedule";
+import ParentMessagesPage from "@/pages/dashboard/parent/messages";
+import ParentOrdersPage from "@/pages/dashboard/parent/orders";
+import ParentAddressesPage from "@/pages/dashboard/parent/addresses";
+import ParentSettingsPage from "@/pages/dashboard/parent/settings";
+
 function Router() {
   return (
     <Switch>
@@ -34,6 +43,16 @@ function Router() {
       <Route path="/dashboard/student" component={StudentDashboard} />
       <Route path="/dashboard/parent" component={ParentDashboard} />
       <Route path="/dashboard/tutor" component={TutorDashboard} />
+
+      {/* Parent Dashboard Routes */}
+      <Route path="/dashboard/parent/profile" component={ParentProfilePage} />
+      <Route path="/dashboard/parent/progress" component={ParentProgressPage} />
+      <Route path="/dashboard/parent/schedule" component={ParentSchedulePage} />
+      <Route path="/dashboard/parent/messages" component={ParentMessagesPage} />
+      <Route path="/dashboard/parent/orders" component={ParentOrdersPage} />
+      <Route path="/dashboard/parent/addresses" component={ParentAddressesPage} />
+      <Route path="/dashboard/parent/settings" component={ParentSettingsPage} />
+
       <Route component={NotFound} />
     </Switch>
   );
