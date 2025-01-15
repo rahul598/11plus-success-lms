@@ -19,11 +19,11 @@ export type LiveClass = {
   status: "scheduled" | "in_progress" | "completed" | "cancelled";
 };
 
-interface DataTableProps {
+export interface ClassTableProps {
   onJoinClass?: (classId: string) => void;
 }
 
-export const columns: ColumnDef<LiveClass>[] = [
+export const columns: ColumnDef<LiveClass, ClassTableProps>[] = [
   {
     accessorKey: "title",
     header: ({ column }) => {
@@ -79,7 +79,7 @@ export const columns: ColumnDef<LiveClass>[] = [
     id: "actions",
     cell: ({ row, table }) => {
       const liveClass = row.original;
-      const { onJoinClass } = table.options.meta as DataTableProps;
+      const { onJoinClass } = table.options.meta as ClassTableProps;
 
       return (
         <DropdownMenu>

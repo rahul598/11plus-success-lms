@@ -8,6 +8,18 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Form } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DataTable } from "@/components/ui/data-table";
 import { columns } from "@/components/classes/columns";
@@ -15,13 +27,35 @@ import { useEffect, useRef, useState } from "react";
 import { webRTCService } from "@/lib/webrtc-service";
 import { useToast } from "@/hooks/use-toast";
 
+const createClassSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().min(1, "Description is required"),
+  startTime: z.string().min(1, "Start time is required"),
+  endTime: z.string().min(1, "End time is required"),
+  maxParticipants: z.number().min(1, "Must allow at least 1 participant"),
+});
+
+type CreateClassInput = z.infer<typeof createClassSchema>;
+
 export default function LiveClasses() {
   const { toast } = useToast();
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const [isJoined, setIsJoined] = useState(false);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
+  const [isCreating, setIsCreating] = useState(false);
   const remoteVideosRef = useRef<Map<string, HTMLVideoElement>>(new Map());
+
+  const form = useForm<CreateClassInput>({
+    resolver: zodResolver(createClassSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      startTime: "",
+      endTime: "",
+      maxParticipants: 30,
+    },
+  });
 
   const { data: classes, isLoading } = useQuery({
     queryKey: ["live-classes"],
@@ -29,6 +63,33 @@ export default function LiveClasses() {
       const response = await fetch("/api/classes/live");
       if (!response.ok) throw new Error("Failed to fetch classes");
       return response.json();
+    },
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (data: CreateClassInput) => {
+      const response = await fetch("/api/classes/live", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error("Failed to create class");
+      return response.json();
+    },
+    onSuccess: () => {
+      setIsCreating(false);
+      toast({
+        title: "Success",
+        description: "Class has been created successfully",
+      });
+      form.reset();
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -76,10 +137,21 @@ export default function LiveClasses() {
       }
     };
 
-    window.addEventListener('new-peer-stream', handleNewPeerStream);
+    const handlePeerDisconnected = (event: Event) => {
+      const { userId } = (event as CustomEvent).detail;
+      const videoElement = remoteVideosRef.current.get(userId);
+      if (videoElement) {
+        videoElement.parentElement?.remove();
+        remoteVideosRef.current.delete(userId);
+      }
+    };
+
+    window.addEventListener('webrtc-stream-added', handleNewPeerStream);
+    window.addEventListener('webrtc-stream-removed', handlePeerDisconnected);
 
     return () => {
-      window.removeEventListener('new-peer-stream', handleNewPeerStream);
+      window.removeEventListener('webrtc-stream-added', handleNewPeerStream);
+      window.removeEventListener('webrtc-stream-removed', handlePeerDisconnected);
       if (isJoined) {
         webRTCService.leaveRoom();
         setIsJoined(false);
@@ -107,15 +179,94 @@ export default function LiveClasses() {
     }
   };
 
+  function onSubmit(data: CreateClassInput) {
+    createMutation.mutate(data);
+  }
+
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <div className="flex items-center justify-between space-y-2">
         <h2 className="text-3xl font-bold tracking-tight">Live Classes</h2>
         <div className="flex items-center space-x-2">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            Schedule Class
-          </Button>
+          <Dialog open={isCreating} onOpenChange={setIsCreating}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Create Class
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create a New Class</DialogTitle>
+              </DialogHeader>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <div className="space-y-2">
+                    <label>Title</label>
+                    <Input {...form.register("title")} />
+                    {form.formState.errors.title && (
+                      <p className="text-sm text-red-500">
+                        {form.formState.errors.title.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <label>Description</label>
+                    <Input {...form.register("description")} />
+                    {form.formState.errors.description && (
+                      <p className="text-sm text-red-500">
+                        {form.formState.errors.description.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <label>Start Time</label>
+                    <Input 
+                      type="datetime-local" 
+                      {...form.register("startTime")} 
+                    />
+                    {form.formState.errors.startTime && (
+                      <p className="text-sm text-red-500">
+                        {form.formState.errors.startTime.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <label>End Time</label>
+                    <Input 
+                      type="datetime-local" 
+                      {...form.register("endTime")} 
+                    />
+                    {form.formState.errors.endTime && (
+                      <p className="text-sm text-red-500">
+                        {form.formState.errors.endTime.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <label>Max Participants</label>
+                    <Input 
+                      type="number" 
+                      {...form.register("maxParticipants", { valueAsNumber: true })} 
+                    />
+                    {form.formState.errors.maxParticipants && (
+                      <p className="text-sm text-red-500">
+                        {form.formState.errors.maxParticipants.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <Button type="submit" className="w-full">
+                    Create Class
+                  </Button>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -227,7 +378,9 @@ export default function LiveClasses() {
           <DataTable 
             columns={columns} 
             data={classes?.data || []}
-            onJoinClass={(classId) => joinMutation.mutate(classId)}
+            meta={{
+              onJoinClass: (classId) => joinMutation.mutate(classId)
+            }}
           />
         </TabsContent>
       </Tabs>

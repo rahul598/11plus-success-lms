@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { setupWebSocketServer } from "./socket";
+import classRoutes from "./routes/classes";
 
 const app = express();
 app.use(express.json());
@@ -35,6 +36,9 @@ app.use((req, res, next) => {
 
 (async () => {
   try {
+    // Register class routes
+    app.use(classRoutes);
+
     // First register all API routes
     const server = registerRoutes(app);
 
