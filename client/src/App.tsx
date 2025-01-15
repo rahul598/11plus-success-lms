@@ -59,10 +59,18 @@ function Router() {
     );
   }
 
+  // If user is logged in, redirect them to their dashboard
+  if (user && window.location.pathname === "/") {
+    const dashboardRoute = getDashboardRoute(user.role);
+    window.location.href = dashboardRoute;
+    return null;
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       <main className="flex-1">
         <Switch>
+          {/* Public Routes */}
           <Route path="/" component={HomePage} />
           <Route path="/mock-exams" component={MockExamsPage} />
           <Route path="/reports" component={ReportsPage} />
@@ -111,18 +119,20 @@ function Router() {
                 </>
               )}
 
-              {/* Redirect to appropriate dashboard if accessing wrong routes */}
-              <Route>
+              {/* If accessing wrong dashboard routes, redirect to correct one */}
+              <Route path="/dashboard/*">
                 {() => {
                   const correctDashboard = getDashboardRoute(user.role);
-                  window.location.href = correctDashboard;
+                  if (window.location.pathname !== correctDashboard) {
+                    window.location.href = correctDashboard;
+                  }
                   return null;
                 }}
               </Route>
             </>
           ) : (
             // Redirect to login if not authenticated
-            <Route>
+            <Route path="/dashboard/*">
               {() => {
                 window.location.href = "/auth/login";
                 return null;
