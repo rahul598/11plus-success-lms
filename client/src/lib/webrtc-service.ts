@@ -1,192 +1,155 @@
-import Peer from 'simple-peer';
 import { io, Socket } from 'socket.io-client';
-import { initializeWebRTCPolyfills, checkWebRTCSupport } from './webrtc-polyfills';
 
-// Initialize polyfills before using WebRTC
-initializeWebRTCPolyfills();
-
-interface SignalData {
-  type: RTCSdpType;
-  sdp?: string;
+interface PeerConnection {
+  peerConnection: RTCPeerConnection;
+  stream?: MediaStream;
 }
 
 class WebRTCService {
   private socket: Socket;
-  private peers: Map<string, Peer.Instance> = new Map();
+  private peerConnections: Map<string, PeerConnection> = new Map();
   private localStream: MediaStream | null = null;
   private roomId: string | null = null;
 
   constructor() {
-    try {
-      this.socket = io(window.location.origin, {
-        path: '/ws',
-        transports: ['websocket', 'polling'],
-        reconnection: true,
-        reconnectionAttempts: 5,
-        timeout: 10000
-      });
-
-      this.setupSocketListeners();
-    } catch (error) {
-      console.error('Failed to initialize WebRTC service:', error);
-      throw new Error('WebRTC initialization failed');
-    }
+    this.socket = io(window.location.origin);
+    this.setupSocketListeners();
   }
 
   private setupSocketListeners() {
-    this.socket.on('connect', () => {
-      console.log('Socket connected successfully');
-    });
-
-    this.socket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error);
-    });
-
-    this.socket.on('userJoinedRoom', ({ userId, signal }: { userId: string; signal: SignalData }) => {
+    this.socket.on('userJoinedRoom', async ({ userId }) => {
       console.log('New user joined:', userId);
-      this.createPeer(userId, false);
+      await this.createPeerConnection(userId, true);
     });
 
     this.socket.on('userLeftRoom', (userId: string) => {
-      console.log('User left:', userId);
-      if (this.peers.has(userId)) {
-        this.peers.get(userId)?.destroy();
-        this.peers.delete(userId);
+      this.removePeerConnection(userId);
+    });
 
-        // Dispatch event to remove video element
-        window.dispatchEvent(new CustomEvent('peer-left', { detail: { userId } }));
+    this.socket.on('receivedOffer', async ({ userId, offer }) => {
+      console.log('Received offer from:', userId);
+      const peerConnection = await this.createPeerConnection(userId, false);
+      await peerConnection.peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+      const answer = await peerConnection.peerConnection.createAnswer();
+      await peerConnection.peerConnection.setLocalDescription(answer);
+      this.socket.emit('sendAnswer', { userId, answer });
+    });
+
+    this.socket.on('receivedAnswer', async ({ userId, answer }) => {
+      console.log('Received answer from:', userId);
+      const peerConnection = this.peerConnections.get(userId);
+      if (peerConnection) {
+        await peerConnection.peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
       }
     });
 
-    this.socket.on('receivingSignal', ({ userId, signal }: { userId: string; signal: SignalData }) => {
-      console.log('Received signal from user:', userId);
-      if (this.peers.has(userId)) {
-        try {
-          this.peers.get(userId)?.signal(signal);
-        } catch (error) {
-          console.error('Error handling peer signal:', error);
-        }
-      } else {
-        this.createPeer(userId, false, signal);
+    this.socket.on('receivedIceCandidate', async ({ userId, candidate }) => {
+      console.log('Received ICE candidate for:', userId);
+      const peerConnection = this.peerConnections.get(userId);
+      if (peerConnection) {
+        await peerConnection.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
       }
-    });
-
-    this.socket.on('error', (error: string) => {
-      console.error('WebRTC error:', error);
     });
   }
 
-  private createPeer(userId: string, initiator: boolean, incomingSignal?: SignalData) {
-    try {
-      if (!this.localStream) {
-        throw new Error('Local stream not available');
-      }
+  private async createPeerConnection(userId: string, isInitiator: boolean): Promise<PeerConnection> {
+    const peerConnection = new RTCPeerConnection({
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' }
+      ]
+    });
 
-      const peer = new Peer({
-        initiator,
-        trickle: false,
-        stream: this.localStream,
-        config: {
-          iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:global.stun.twilio.com:3478' }
-          ]
+    if (this.localStream) {
+      this.localStream.getTracks().forEach(track => {
+        if (this.localStream) {
+          peerConnection.addTrack(track, this.localStream);
         }
       });
+    }
 
-      peer.on('signal', (signal: SignalData) => {
-        if (initiator) {
-          this.socket.emit('sendSignal', { signal, userId });
-        } else {
-          this.socket.emit('returningSignal', { signal, userId });
-        }
-      });
-
-      peer.on('stream', (stream: MediaStream) => {
-        window.dispatchEvent(new CustomEvent('new-peer-stream', {
-          detail: { stream, userId }
-        }));
-      });
-
-      peer.on('error', (err) => {
-        console.error('Peer connection error:', err);
-        this.peers.delete(userId);
-      });
-
-      peer.on('close', () => {
-        console.log('Peer connection closed:', userId);
-        this.peers.delete(userId);
-        window.dispatchEvent(new CustomEvent('peer-left', { detail: { userId } }));
-      });
-
-      if (incomingSignal) {
-        peer.signal(incomingSignal);
+    peerConnection.onicecandidate = (event) => {
+      if (event.candidate) {
+        this.socket.emit('sendIceCandidate', { userId, candidate: event.candidate });
       }
+    };
 
-      this.peers.set(userId, peer);
-      return peer;
-    } catch (error) {
-      console.error('Error creating peer connection:', error);
-      throw error;
+    peerConnection.ontrack = (event) => {
+      const [remoteStream] = event.streams;
+      const connection = this.peerConnections.get(userId);
+      if (connection) {
+        connection.stream = remoteStream;
+        this.dispatchStreamEvent(userId, remoteStream);
+      }
+    };
+
+    const connection: PeerConnection = { peerConnection };
+    this.peerConnections.set(userId, connection);
+
+    if (isInitiator) {
+      const offer = await peerConnection.createOffer();
+      await peerConnection.setLocalDescription(offer);
+      this.socket.emit('sendOffer', { userId, offer });
+    }
+
+    return connection;
+  }
+
+  private removePeerConnection(userId: string) {
+    const connection = this.peerConnections.get(userId);
+    if (connection) {
+      connection.peerConnection.close();
+      this.peerConnections.delete(userId);
+      this.dispatchStreamEndEvent(userId);
     }
   }
 
-  async joinRoom(roomId: string, isTeacher: boolean = false): Promise<MediaStream> {
-    if (!checkWebRTCSupport()) {
-      throw new Error('Your browser does not support WebRTC');
-    }
+  private dispatchStreamEvent(userId: string, stream: MediaStream) {
+    window.dispatchEvent(new CustomEvent('webrtc-stream-added', {
+      detail: { userId, stream }
+    }));
+  }
 
+  private dispatchStreamEndEvent(userId: string) {
+    window.dispatchEvent(new CustomEvent('webrtc-stream-removed', {
+      detail: { userId }
+    }));
+  }
+
+  async joinRoom(roomId: string): Promise<MediaStream> {
     try {
-      this.roomId = roomId;
       this.localStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        },
+        video: true,
         audio: true
       });
 
-      this.socket.emit('joinRoom', { roomId, isTeacher });
-      console.log('Successfully joined room:', roomId);
-
+      this.roomId = roomId;
+      this.socket.emit('joinRoom', { roomId });
       return this.localStream;
     } catch (error) {
-      console.error('Error accessing media devices:', error);
+      console.error('Error joining room:', error);
       throw error;
     }
   }
 
   leaveRoom() {
     if (this.roomId) {
-      console.log('Leaving room:', this.roomId);
       this.socket.emit('leaveRoom', this.roomId);
 
-      // Clean up media streams
       if (this.localStream) {
-        this.localStream.getTracks().forEach(track => {
-          track.stop();
-          console.log('Stopped track:', track.kind);
-        });
+        this.localStream.getTracks().forEach(track => track.stop());
         this.localStream = null;
       }
 
-      // Clean up peer connections
-      this.peers.forEach(peer => {
-        try {
-          peer.destroy();
-        } catch (error) {
-          console.error('Error destroying peer:', error);
-        }
+      this.peerConnections.forEach((connection) => {
+        connection.peerConnection.close();
       });
-      this.peers.clear();
+      this.peerConnections.clear();
       this.roomId = null;
-
-      // Dispatch event to clear all remote videos
-      window.dispatchEvent(new CustomEvent('clear-remote-videos'));
     }
   }
 
-  toggleAudioTrack(enabled: boolean) {
+  toggleAudio(enabled: boolean) {
     if (this.localStream) {
       this.localStream.getAudioTracks().forEach(track => {
         track.enabled = enabled;
@@ -194,7 +157,7 @@ class WebRTCService {
     }
   }
 
-  toggleVideoTrack(enabled: boolean) {
+  toggleVideo(enabled: boolean) {
     if (this.localStream) {
       this.localStream.getVideoTracks().forEach(track => {
         track.enabled = enabled;
@@ -203,5 +166,4 @@ class WebRTCService {
   }
 }
 
-// Create and export a singleton instance
 export const webRTCService = new WebRTCService();

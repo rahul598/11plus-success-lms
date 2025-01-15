@@ -1,21 +1,9 @@
-declare module 'stream-browserify';
-declare module 'simple-peer';
+declare module 'socket.io-client';
 
-// Add global declarations for WebRTC polyfills
 declare global {
-  var global: typeof globalThis;
-  var Buffer: typeof Buffer;
-  var process: NodeJS.Process;
-  var util: any;
-  var stream: any;
-
-  interface Window {
-    RTCPeerConnection: any;
-    global: typeof globalThis;
-    Buffer: typeof Buffer;
-    process: NodeJS.Process;
-    util: any;
-    stream: any;
+  interface WindowEventMap {
+    'webrtc-stream-added': CustomEvent<{ userId: string; stream: MediaStream }>;
+    'webrtc-stream-removed': CustomEvent<{ userId: string }>;
   }
 }
 
