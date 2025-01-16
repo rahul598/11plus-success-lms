@@ -55,11 +55,13 @@ export function TestimonialSection() {
           modules={[Autoplay]}
           direction="vertical"
           spaceBetween={20}
-          slidesPerView={3}
+          slidesPerView={4} // Changed to 4
           loop={true}
           autoplay={{
             delay: 0,
             disableOnInteraction: false,
+            pauseOnMouseEnter: false,
+            stopOnLastSlide: false,
             reverseDirection: false
           }}
           speed={3000}
@@ -67,15 +69,15 @@ export function TestimonialSection() {
         >
           {[...testimonials, ...testimonials].map((testimonial, index) => (
             <SwiperSlide key={index}>
-              <Card className="p-6 bg-white shadow-md">
+              <Card className="p-6 bg-white shadow-md hover:shadow-lg transition-shadow duration-300">
                 <div className="flex items-start gap-4">
                   <img
                     src={testimonial.image}
                     alt={testimonial.name}
-                    className="w-12 h-12 rounded-full"
+                    className="w-12 h-12 rounded-full object-cover"
                   />
                   <div>
-                    <h3 className="font-semibold text-lg">{testimonial.name}</h3>
+                    <h3 className="font-semibold text-lg text-[#2D3648]">{testimonial.name}</h3>
                     <div className="flex gap-1 my-2">
                       {Array.from({ length: testimonial.rating }).map((_, i) => (
                         <Star
@@ -84,7 +86,7 @@ export function TestimonialSection() {
                         />
                       ))}
                     </div>
-                    <p className="text-gray-600">{testimonial.text}</p>
+                    <p className="text-[#545F71] text-sm leading-relaxed">{testimonial.text}</p>
                   </div>
                 </div>
               </Card>
