@@ -94,9 +94,9 @@ export function useUser() {
           title: "Success",
           description: "Successfully logged in",
         });
-        // Redirect to the appropriate dashboard based on user role
+        // Force reload to the correct dashboard
         const dashboardRoute = getDashboardRoute(data.user.role);
-        window.location.href = dashboardRoute;
+        window.location.replace(dashboardRoute);
       }
     },
   });
