@@ -14,7 +14,12 @@
     font-family: 'Outfit', sans-serif;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: 'Rowdies', cursive;
   }
 }
@@ -43,9 +48,11 @@
   0% {
     transform: translateY(0px);
   }
+
   50% {
     transform: translateY(-20px);
   }
+
   100% {
     transform: translateY(0px);
   }
@@ -65,4 +72,11 @@
 
 .stats-label {
   @apply text-base text-[#545F71];
+}
+
+.min-h-screen {
+  background-image: url(https://vinsonedge.com/wp-content/uploads/2025/01/BG.png);
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-size: cover;
 }

@@ -10,7 +10,7 @@ export function Hero() {
         src="https://vinsonedge.com/wp-content/uploads/2025/01/rotating-star-01-3.png"
         alt="Star background"
         className="absolute right-[10%] top-[20%] w-8 h-8"
-        animate={{ 
+        animate={{
           rotate: 360,
           scale: [1, 1.2, 1],
         }}
@@ -18,13 +18,13 @@ export function Hero() {
           rotate: {
             duration: 20,
             repeat: Infinity,
-            ease: "linear"
+            ease: "linear",
           },
           scale: {
             duration: 2,
             repeat: Infinity,
-            ease: "easeInOut"
-          }
+            ease: "easeInOut",
+          },
         }}
       />
 
@@ -33,19 +33,19 @@ export function Hero() {
         src="https://vinsonedge.com/wp-content/uploads/2025/01/Bag-slider-01-1.png"
         alt="Floating backpack"
         className="absolute left-[15%] bottom-[30%] w-24 h-24"
-        animate={{ 
+        animate={{
           y: [0, -20, 0],
         }}
         transition={{
           duration: 3,
           repeat: Infinity,
-          ease: "easeInOut"
+          ease: "easeInOut",
         }}
       />
 
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-2xl mx-auto text-center pt-32">
-          <motion.h1 
+          <motion.h1
             className="text-6xl font-bold mb-6 font-display text-[#2D3648]"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -54,7 +54,7 @@ export function Hero() {
             11Plus-Success Empower Your 11+ Journey
           </motion.h1>
 
-          <motion.p 
+          <motion.p
             className="text-xl mb-8 text-[#545F71]"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -72,9 +72,9 @@ export function Hero() {
               size="lg"
               className="bg-[#32DBC9] hover:bg-[#2BC4B4] text-white px-8 py-6 text-lg rounded-full shadow-xl hover:shadow-2xl transition-all duration-300"
             >
-              <img 
-                src="https://vinsonedge.com/wp-content/uploads/2025/01/CTA-1.png" 
-                alt="Book Your Mock Exam Now" 
+              <img
+                src="https://vinsonedge.com/wp-content/uploads/2025/01/CTA-1.png"
+                alt="Book Your Mock Exam Now"
                 className="h-8"
               />
               <ArrowRight className="ml-2 h-5 w-5" />

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Menu, X, User, LogOut } from "lucide-react";
+import { Menu, X, User, LogOut, ShoppingCart } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
   DropdownMenu,
@@ -57,31 +57,34 @@ export function Header() {
       isScrolled ? 'bg-white shadow-md' : 'bg-transparent'
     }`}>
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-20">
+        <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/">
             <img 
-              src="https://vinsonedge.com/wp-content/uploads/2025/01/Logo-3.png" 
+              src="/assets/Logo-3.png" 
               alt="11Plus Success" 
-              className="h-12 cursor-pointer"
+              className="h-10 cursor-pointer"
             />
           </Link>
 
           {/* Navigation Links - Hidden on Mobile */}
           <nav className="hidden md:flex items-center space-x-8">
-            <Link href="/mock-exams" className="text-[#2D3648] hover:text-[#00AA9B] font-medium">
+            <Link href="/" className="text-[#2D3648] hover:text-[#00AA9B] font-medium transition-colors">
+              Home
+            </Link>
+            <Link href="/mock-exams" className="text-[#2D3648] hover:text-[#00AA9B] font-medium transition-colors">
               Mock Exams
             </Link>
-            <Link href="/reports" className="text-[#2D3648] hover:text-[#00AA9B] font-medium">
+            <Link href="/reports" className="text-[#2D3648] hover:text-[#00AA9B] font-medium transition-colors">
               Reports
             </Link>
-            <Link href="/tution" className="text-[#2D3648] hover:text-[#00AA9B] font-medium">
+            <Link href="/tution" className="text-[#2D3648] hover:text-[#00AA9B] font-medium transition-colors">
               Tution
             </Link>
-            <Link href="/about-us" className="text-[#2D3648] hover:text-[#00AA9B] font-medium">
+            <Link href="/about-us" className="text-[#2D3648] hover:text-[#00AA9B] font-medium transition-colors">
               About Us
             </Link>
-            <Link href="/contact-us" className="text-[#2D3648] hover:text-[#00AA9B] font-medium">
+            <Link href="/contact-us" className="text-[#2D3648] hover:text-[#00AA9B] font-medium transition-colors">
               Contact Us
             </Link>
           </nav>
@@ -89,46 +92,57 @@ export function Header() {
           {/* Right side buttons/user menu */}
           <div className="flex items-center gap-4">
             {user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                    <Avatar className="h-10 w-10">
-                      <AvatarFallback>
-                        {user.username[0].toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
+              <>
+                <Link href="/cart">
+                  <Button variant="ghost" size="icon" className="relative">
+                    <ShoppingCart className="h-5 w-5 text-[#2D3648]" />
+                    <span className="absolute -top-1 -right-1 bg-[#00AA9B] text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      0
+                    </span>
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56" align="end">
-                  <DropdownMenuItem onClick={() => setLocation(getDashboardRoute(user.role))}>
-                    <User className="mr-2 h-4 w-4" />
-                    Dashboard
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Logout
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                </Link>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                      <Avatar className="h-10 w-10">
+                        <AvatarFallback>
+                          {user.username[0].toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56" align="end">
+                    <DropdownMenuItem onClick={() => setLocation(getDashboardRoute(user.role))}>
+                      <User className="mr-2 h-4 w-4" />
+                      Dashboard
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Logout
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
             ) : (
-              <div className="hidden md:flex items-center gap-2">
-                <Link href="/auth/login">
-                  <Button 
-                    variant="outline"
-                    className="bg-[#00AA9B] text-white hover:bg-[#009488] border-none"
-                  >
-                    Login
+              <>
+                <Link href="/cart">
+                  <Button variant="ghost" size="icon" className="relative">
+                    <ShoppingCart className="h-5 w-5 text-[#2D3648]" />
+                    <span className="absolute -top-1 -right-1 bg-[#00AA9B] text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      0
+                    </span>
                   </Button>
                 </Link>
-                <Link href="/auth/signup">
+                <div className="hidden md:block">
                   <Button 
-                    className="bg-[#32DBC9] text-white hover:bg-[#2BC4B4] border-none"
+                    onClick={() => setLocation('/auth/login')}
+                    className="bg-[#00AA9B] text-white hover:bg-[#009488] border-none px-6"
                   >
-                    Sign up
+                    Login / Sign up
                   </Button>
-                </Link>
-              </div>
+                </div>
+              </>
             )}
 
             {/* Mobile menu button */}
@@ -147,8 +161,11 @@ export function Header() {
 
         {/* Mobile Menu */}
         {isMenuOpen && (
-          <div className="md:hidden bg-white">
+          <div className="md:hidden bg-white shadow-lg rounded-b-lg">
             <nav className="flex flex-col space-y-4 py-4">
+              <Link href="/" onClick={() => setIsMenuOpen(false)} className="text-[#2D3648] hover:text-[#00AA9B] font-medium px-4">
+                Home
+              </Link>
               <Link href="/mock-exams" onClick={() => setIsMenuOpen(false)} className="text-[#2D3648] hover:text-[#00AA9B] font-medium px-4">
                 Mock Exams
               </Link>
@@ -164,42 +181,17 @@ export function Header() {
               <Link href="/contact-us" onClick={() => setIsMenuOpen(false)} className="text-[#2D3648] hover:text-[#00AA9B] font-medium px-4">
                 Contact Us
               </Link>
-              {user ? (
-                <>
-                  <Link 
-                    href={getDashboardRoute(user.role)} 
-                    onClick={() => setIsMenuOpen(false)} 
-                    className="text-[#2D3648] hover:text-[#00AA9B] font-medium px-4"
-                  >
-                    Dashboard
-                  </Link>
-                  <button
+              {!user && (
+                <div className="px-4">
+                  <Button 
                     onClick={() => {
-                      handleLogout();
+                      setLocation('/auth/login');
                       setIsMenuOpen(false);
                     }}
-                    className="text-[#2D3648] hover:text-[#00AA9B] font-medium px-4 text-left"
+                    className="w-full bg-[#00AA9B] text-white hover:bg-[#009488] border-none"
                   >
-                    Logout
-                  </button>
-                </>
-              ) : (
-                <div className="flex flex-col space-y-2 px-4">
-                  <Link href="/auth/login" onClick={() => setIsMenuOpen(false)}>
-                    <Button 
-                      variant="outline"
-                      className="w-full bg-[#00AA9B] text-white hover:bg-[#009488] border-none"
-                    >
-                      Login
-                    </Button>
-                  </Link>
-                  <Link href="/auth/signup" onClick={() => setIsMenuOpen(false)}>
-                    <Button 
-                      className="w-full bg-[#32DBC9] text-white hover:bg-[#2BC4B4] border-none"
-                    >
-                      Sign up
-                    </Button>
-                  </Link>
+                    Login / Sign up
+                  </Button>
                 </div>
               )}
             </nav>
