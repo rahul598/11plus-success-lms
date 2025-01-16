@@ -79,6 +79,8 @@ export function useUser() {
           title: "Success",
           description: "Successfully logged in",
         });
+        // Add page refresh after successful login
+        window.location.reload();
       }
     },
   });
