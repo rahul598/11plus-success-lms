@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { setupAuth } from "./auth";
 import { db } from "@db";
 import {
   users,
@@ -117,7 +118,7 @@ function requireSubscription(feature: string) {
 
 export function registerRoutes(app: Express): Server {
   // Sets up auth middleware and routes
-  //setupAuth(app); //this line might need to be uncommented depending on setupAuth implementation.
+  setupAuth(app);
 
   // Register the classes router
   app.use(classesRouter);
@@ -959,7 +960,7 @@ export function registerRoutes(app: Express): Server {
   app.get("/api/questions/stats", requireAuth, async (_req, res) => {
         try {
       const [{ total }] = await db
-                .select({
+        .select({
           total: sql<number>`count(*)`,
         })
         .from(questions);

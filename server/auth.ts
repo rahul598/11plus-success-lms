@@ -8,7 +8,6 @@ import { promisify } from "util";
 import { users } from "@db/schema";
 import { db } from "@db";
 import { eq } from "drizzle-orm";
-import { sendWelcomeEmail } from "./utils/email";
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -105,7 +104,7 @@ export function setupAuth(app: Express) {
 
   app.post("/api/register", async (req, res) => {
     try {
-      const { username, password, email, name, role } = req.body;
+      const { username, password, email, role } = req.body;
 
       // Check if user already exists
       const [existingUser] = await db
@@ -128,18 +127,9 @@ export function setupAuth(app: Express) {
           username,
           password: hashedPassword,
           email,
-          name,
-          role,
+          role: role || "student",
         })
         .returning();
-
-      // Try to send welcome email
-      try {
-        await sendWelcomeEmail(email, name);
-      } catch (emailError) {
-        console.error('Failed to send welcome email:', emailError);
-        // Continue with registration but notify the user about email issue
-      }
 
       // Log the user in
       req.login(newUser, (err) => {
@@ -149,8 +139,13 @@ export function setupAuth(app: Express) {
         }
 
         return res.json({
-          message: "Registration completed successfully. Welcome email will be sent shortly.",
-          user: newUser,
+          message: "Registration successful",
+          user: {
+            id: newUser.id,
+            username: newUser.username,
+            email: newUser.email,
+            role: newUser.role
+          }
         });
       });
     } catch (error: any) {
@@ -176,7 +171,12 @@ export function setupAuth(app: Express) {
 
         return res.json({
           message: "Login successful",
-          user,
+          user: {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            role: user.role
+          }
         });
       });
     })(req, res, next);
@@ -193,7 +193,13 @@ export function setupAuth(app: Express) {
 
   app.get("/api/user", (req, res) => {
     if (req.isAuthenticated()) {
-      return res.json(req.user);
+      const user = req.user;
+      return res.json({
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role
+      });
     }
     res.status(401).send("Not logged in");
   });
