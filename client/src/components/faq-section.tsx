@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { 
+import {
   Accordion,
   AccordionContent,
   AccordionItem,
@@ -77,10 +77,10 @@ export function FAQSection() {
               Reach out to us for quick and reliable assistance
             </p>
             <div className="flex gap-4 mt-4 justify-center">
-              <Button className="bg-[#32DBC9] hover:bg-[#2BC4B4] text-white">
+              <Button className="btn-primary">
                 Chat
               </Button>
-              <Button className="bg-[#32DBC9] hover:bg-[#2BC4B4] text-white">
+              <Button className="btn-primary">
                 Call
               </Button>
             </div>
