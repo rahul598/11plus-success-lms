@@ -28,6 +28,52 @@ export function Hero() {
         }}
       />
 
+      {/* Additional Star Decorations */}
+      <motion.img
+        src="https://vinsonedge.com/wp-content/uploads/2025/01/rotating-star-01-3.png"
+        alt="Star decoration"
+        className="absolute left-[20%] top-[15%] w-4 h-4"
+        animate={{
+          rotate: -360,
+          scale: [1, 1.3, 1],
+        }}
+        transition={{
+          rotate: {
+            duration: 25,
+            repeat: Infinity,
+            ease: "linear",
+          },
+          scale: {
+            duration: 3,
+            repeat: Infinity,
+            ease: "easeInOut",
+          },
+        }}
+      />
+
+      {/* Small Star */}
+      <motion.img
+        src="https://vinsonedge.com/wp-content/uploads/2025/01/rotating-star-01-3.png"
+        alt="Star decoration"
+        className="absolute right-[30%] bottom-[30%] w-3 h-3"
+        animate={{
+          rotate: 360,
+          scale: [1, 1.4, 1],
+        }}
+        transition={{
+          rotate: {
+            duration: 15,
+            repeat: Infinity,
+            ease: "linear",
+          },
+          scale: {
+            duration: 2.5,
+            repeat: Infinity,
+            ease: "easeInOut",
+          },
+        }}
+      />
+
       {/* Floating backpack */}
       <motion.img
         src="https://vinsonedge.com/wp-content/uploads/2025/01/Bag-slider-01-1.png"
