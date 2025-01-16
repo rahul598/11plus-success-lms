@@ -6,8 +6,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        body: ['Outfit', 'sans-serif'],
-        display: ['Rowdies', 'cursive'],
+        sans: ['Inter', 'sans-serif'],
+        display: ['Rowdies', 'display'],
       },
       borderRadius: {
         lg: "var(--radius)",

@@ -6,6 +6,7 @@ export function Hero() {
   return (
     <section className="relative min-h-screen pt-32 overflow-hidden bg-gradient-to-b from-[#E6FAF8] to-white">
       {/* Background decorations */}
+      <div className="elemenBackgroundOverlay"></div>
       <motion.img
         src="https://vinsonedge.com/wp-content/uploads/2025/01/rotating-star-01-3.png"
         alt="Star background"
@@ -118,13 +119,10 @@ export function Hero() {
             >
               <Button
                 size="lg"
-                className="bg-[#32DBC9] hover:bg-[#2BC4B4] text-white px-8 py-6 text-lg rounded-full shadow-xl hover:shadow-2xl transition-all duration-300"
+                className="relative bg-[#32DBC9] hover:bg-[#2BC4B4] text-white px-8 py-4 text-lg rounded-full shadow-md hover:shadow-lg transition-all duration-300"
               >
-                <img
-                  src="https://vinsonedge.com/wp-content/uploads/2025/01/CTA-1.png"
-                  alt="Book Your Mock Exam Now"
-                  className="h-8"
-                />
+                <span className="absolute -bottom-1 left-0 right-0 mx-auto h-2 w-full bg-[#14756F] rounded-full blur-md -z-10"></span>
+                Book Your Mock Exam Now
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </motion.div>

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Rowdies:wght@300;400;700&family=Outfit:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Rowdies:wght@300;400;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -10,17 +10,12 @@
   }
 
   body {
-    @apply font-body antialiased bg-background text-foreground;
-    font-family: 'Outfit', sans-serif;
+    @apply font-sans antialiased bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
   }
 
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
-    font-family: 'Rowdies', cursive;
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Rowdies', display;
   }
 }
 
@@ -48,11 +43,9 @@
   0% {
     transform: translateY(0px);
   }
-
   50% {
     transform: translateY(-20px);
   }
-
   100% {
     transform: translateY(0px);
   }
@@ -79,4 +72,18 @@
   background-position: center center;
   background-repeat: no-repeat;
   background-size: cover;
+}
+
+.elemenBackgroundOverlay {
+  background-image: url(https://dtthemes.kinsta.cloud/a-for-apple/wp-content/uploads/sites/2/2024/02/slider-2-star-bg.png);
+  background-position: bottom left;
+  background-repeat: no-repeat;
+  background-size: contain;
+  opacity: 1;
+  transition: background 0.3s, border-radius 0.3s, opacity 0.3s;
+  height: 100%;
+  width: 100%;
+  top: 0;
+  left: 0;
+  position: absolute;
 }
