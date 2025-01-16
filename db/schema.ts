@@ -191,7 +191,7 @@ export const scheduledExams = pgTable("scheduled_exams", {
   description: text("description"),
   examPdfId: integer("exam_pdf_id").references(() => examPDFs.id).notNull(),
   startTime: timestamp("start_time").notNull(),
-  duration: integer("duration").notNull(), 
+  duration: integer("duration").notNull(),
   totalMarks: integer("total_marks").notNull(),
   status: text("status", { enum: ["scheduled", "in_progress", "completed", "cancelled"] }).default("scheduled").notNull(),
   createdBy: integer("created_by").references(() => users.id).notNull(),
@@ -216,6 +216,34 @@ export const parentStudentRelations = pgTable("parent_student_relations", {
   relation: text("relation").notNull(),
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const studentRewards = pgTable("student_rewards", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  rewardId: integer("reward_id").references(() => rewards.id).notNull(),
+  earnedAt: timestamp("earned_at").defaultNow().notNull(),
+  status: text("status", { enum: ["active", "expired", "consumed"] }).default("active").notNull(),
+});
+
+export const subscriptionPlans = pgTable("subscription_plans", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  duration: integer("duration").notNull(),
+  features: jsonb("features").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+});
+
+export const userSubscriptions = pgTable("user_subscriptions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  planId: integer("plan_id").references(() => subscriptionPlans.id).notNull(),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  status: text("status", { enum: ["active", "expired", "cancelled"] }).default("active").notNull(),
+  paymentId: integer("payment_id").references(() => payments.id),
 });
 
 export const media = pgTable("media", {
