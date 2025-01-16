@@ -1,6 +1,10 @@
 import { execSync } from 'child_process';
 import path from 'path';
 import fs from 'fs';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const REPO_NAME = "digital-learning-platform-backup";
