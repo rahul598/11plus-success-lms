@@ -1,6 +1,5 @@
-import type { Express, Request, Response, NextFunction } from "express";
+import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { setupAuth } from "./auth";
 import { db } from "@db";
 import {
   users,
@@ -23,26 +22,18 @@ import {
   studentRewards,
   subscriptionPlans,
   userSubscriptions,
-  products,
-  questionCategories,
-  quizzes,
-  quizQuestions,
   liveClasses,
   classParticipants,
-  recordedVideos,
-  examPDFs,
-  scheduledExams,
-  examSubmissions,
-  parentStudentRelations
+  recordedVideos
 } from "@db/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
+import express from "express";
 import multer from "multer";
 import { stringify } from "csv-stringify";
 import { parse } from "csv-parse";
-import * as fs from 'fs';
-import * as path from 'path';
-import { Decimal } from 'decimal.js';
-import express from 'express';
+import * as fs from "fs";
+import * as path from "path";
+import classesRouter from "./routes/classes";
 
 // Configure multer for file uploads with proper directory
 const storage = multer.diskStorage({
@@ -63,7 +54,7 @@ const storage = multer.diskStorage({
   }
 });
 
-const fileFilter = (_req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+const fileFilter = (_req: express.Request, file: express.Multer.File, cb: multer.FileFilterCallback) => {
   // Accept images only
   if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/i)) {
     return cb(new Error('Only image files are allowed!'));
@@ -71,7 +62,7 @@ const fileFilter = (_req: Request, file: Express.Multer.File, cb: multer.FileFil
   cb(null, true);
 };
 
-const upload = multer({ 
+const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
@@ -83,20 +74,20 @@ const upload = multer({
 declare global {
   namespace Express {
     interface Request {
-      file?: Express.Multer.File;
+      file?: express.Multer.File;
     }
   }
 }
 
 // Auth middleware
-function requireAuth(req: Request, res: Response, next: NextFunction) {
+function requireAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
   if (req.isAuthenticated()) {
     return next();
   }
   res.status(401).send("Unauthorized");
 }
 
-function requireAdmin(req: Request, res: Response, next: NextFunction) {
+function requireAdmin(req: express.Request, res: express.Response, next: express.NextFunction) {
   if (req.isAuthenticated() && req.user?.role === "admin") {
     return next();
   }
@@ -105,7 +96,7 @@ function requireAdmin(req: Request, res: Response, next: NextFunction) {
 
 // Add this middleware after the existing requireAuth and requireAdmin middleware
 function requireSubscription(feature: string) {
-  return async (req: Request & { user?: Express.User }, res: Response, next: NextFunction) => {
+  return async (req: express.Request & { user?: express.User }, res: express.Response, next: express.NextFunction) => {
     if (!req.user) {
       return res.status(401).send("Unauthorized");
     }
@@ -126,7 +117,10 @@ function requireSubscription(feature: string) {
 
 export function registerRoutes(app: Express): Server {
   // Sets up auth middleware and routes
-  setupAuth(app);
+  //setupAuth(app); //this line might need to be uncommented depending on setupAuth implementation.
+
+  // Register the classes router
+  app.use(classesRouter);
 
   // Serve uploaded files from the public directory
   app.use('/uploads', express.static(path.join(process.cwd(), 'public', 'uploads')));
@@ -171,7 +165,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Student Progress
-  app.get("/api/progress", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+  app.get("/api/progress", requireAuth, async (req: express.Request & { user?: express.User }, res) => {
     if (!req.user) {
       return res.status(401).send("Unauthorized");
     }
@@ -196,7 +190,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.post("/api/mock-tests", requireAuth, requireSubscription("mockTests"), async (req: Request & { user?: Express.User }, res) => {
+  app.post("/api/mock-tests", requireAuth, requireSubscription("mockTests"), async (req: express.Request & { user?: express.User }, res) => {
     if (!req.user) {
       return res.status(401).send("Unauthorized");
     }
@@ -224,7 +218,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Mock Test Generation
-  app.post("/api/mock-tests/generate", requireAuth, requireSubscription("mockTests"), async (req: Request & { user?: Express.User }, res) => {
+  app.post("/api/mock-tests/generate", requireAuth, requireSubscription("mockTests"), async (req: express.Request & { user?: express.User }, res) => {
     if (!req.user) {
       return res.status(401).send("Unauthorized");
     }
@@ -317,7 +311,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.post("/api/media/upload", requireAuth, upload.single("file"), async (req: Request & { user?: Express.User }, res) => {
+  app.post("/api/media/upload", requireAuth, upload.single("file"), async (req: express.Request & { user?: express.User }, res) => {
     if (!req.user || !req.file) {
       return res.status(400).send(!req.user ? "Unauthorized" : "No file uploaded");
     }
@@ -550,8 +544,8 @@ export function registerRoutes(app: Express): Server {
         .from(users)
         .where(sql`created_at < date_trunc('month', current_date)`);
 
-      const growthRate = previousMonthUsers[0].count 
-        ? ((userStats.newThisMonth / previousMonthUsers[0].count) * 100) 
+      const growthRate = previousMonthUsers[0].count
+        ? ((userStats.newThisMonth / previousMonthUsers[0].count) * 100)
         : 0;
 
       res.json({
@@ -627,7 +621,7 @@ export function registerRoutes(app: Express): Server {
     });
   });
 
-  app.get("/api/tutor/stats", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+  app.get("/api/tutor/stats", requireAuth, async (req: express.Request & { user?: express.User }, res) => {
     if (!req.user || req.user.role !== "tutor") {
       return res.status(403).send("Forbidden");
     }
@@ -672,7 +666,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.get("/api/student/stats", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+  app.get("/api/student/stats", requireAuth, async (req: express.Request & { user?: express.User }, res) => {
     if (!req.user || req.user.role !== "student") {
       return res.status(403).send("Forbidden");
     }
@@ -728,7 +722,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Delete media
-  app.delete("/api/media/:id", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+  app.delete("/api/media/:id", requireAuth, async (req: express.Request & { user?: express.User }, res) => {
     if (!req.user) {
       return res.status(401).send("Unauthorized");
     }
@@ -751,7 +745,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Student Engagement Routes
-  app.get("/api/student/engagement", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+  app.get("/api/student/engagement", requireAuth, async (req: express.Request & { user?: express.User }, res) => {
     if (!req.user) {
       return res.status(401).send("Unauthorized");
     }
@@ -807,7 +801,7 @@ export function registerRoutes(app: Express): Server {
     res.json(allAchievements);
   });
 
-  app.get("/api/student/achievements", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+  app.get("/api/student/achievements", requireAuth, async (req: express.Request & { user?: express.User }, res) => {
     if (!req.user) {
       return res.status(401).send("Unauthorized");
     }
@@ -844,7 +838,7 @@ export function registerRoutes(app: Express): Server {
     res.json(allRewards);
   });
 
-  app.get("/api/student/rewards", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+  app.get("/api/student/rewards", requireAuth, async (req: express.Request & { user?: express.User }, res) => {
     if (!req.user) {
       return res.status(401).send("Unauthorized");
     }
@@ -870,7 +864,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Update student engagement metrics
-  app.post("/api/student/engagement/update", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+  app.post("/api/student/engagement/update", requireAuth, async (req: express.Request & { user?: express.User }, res) => {
     if (!req.user) {
       return res.status(401).send("Unauthorized");
     }
@@ -963,9 +957,10 @@ export function registerRoutes(app: Express): Server {
 
   // Get question statistics
   app.get("/api/questions/stats", requireAuth, async (_req, res) => {
-    try {
+        try {
       const [{ total }] = await db
-        .select({          total: sql<number>`count(*)`,
+                .select({
+          total: sql<number>`count(*)`,
         })
         .from(questions);
 
@@ -1053,7 +1048,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // User Subscription Routes
-  app.get("/api/subscriptions", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+  app.get("/api/subscriptions", requireAuth, async (req: express.Request & { user?: express.User }, res) => {
     if (!req.user) {
       return res.status(401).send("Unauthorized");
     }
@@ -1108,7 +1103,7 @@ export function registerRoutes(app: Express): Server {
   // Add the following after other routes and before events routes
 
   // Subscription Routes
-  app.get("/api/user/subscriptions", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+  app.get("/api/user/subscriptions", requireAuth, async (req: express.Request & { user?: express.User }, res) => {
     if (!req.user) {
       return res.status(401).send("Unauthorized");
     }
@@ -1161,7 +1156,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.post("/api/events", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+  app.post("/api/events", requireAuth, async (req: express.Request & { user?: express.User }, res) => {
     if (!req.user) {
       return res.status(401).send("Unauthorized");
     }
@@ -1206,7 +1201,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.post("/api/events/:id/register", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+  app.post("/api/events/:id/register", requireAuth, async (req: express.Request & { user?: express.User }, res) => {
     if (!req.user) {
       return res.status(401).send("Unauthorized");
     }
@@ -1251,7 +1246,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Automated Result Processing Routes
-  app.post("/api/mock-tests/:sessionId/process-results", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+  app.post("/api/mock-tests/:sessionId/process-results", requireAuth, async (req: express.Request & { user?: express.User }, res) => {
     if (!req.user) {
       return res.status(401).send("Unauthorized");
     }
@@ -1277,7 +1272,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Notification Routes
-  app.get("/api/notifications", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+  app.get("/api/notifications", requireAuth, async (req: express.Request & { user?: express.User }, res) => {
     if (!req.user) {
       return res.status(401).send("Unauthorized");
     }
@@ -1296,7 +1291,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.post("/api/notifications/:id/mark-read", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+  app.post("/api/notifications/:id/mark-read", requireAuth, async (req: express.Request & { user?: express.User }, res) => {
     if (!req.user) {
       return res.status(401).send("Unauthorized");
     }
@@ -1432,7 +1427,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // User Subscription Routes
-  app.get("/api/subscriptions", requireAuth, async (req: Request & { user?: Express.User }, res) => {
+  app.get("/api/subscriptions", requireAuth, async (req: express.Request & { user?: express.User }, res) => {
     if (!req.user) {
       return res.status(401).send("Unauthorized");
     }

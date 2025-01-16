@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, decimal, jsonb, date } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, decimal, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { sql } from "drizzle-orm";
 
@@ -176,35 +176,91 @@ export const rewards = pgTable("rewards", {
   requirements: jsonb("requirements").notNull(),
 });
 
-export const studentRewards = pgTable("student_rewards", {
+export const examPDFs = pgTable("exam_pdfs", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id).notNull(),
-  rewardId: integer("reward_id").references(() => rewards.id).notNull(),
-  earnedAt: timestamp("earned_at").defaultNow().notNull(),
-  status: text("status", { enum: ["active", "expired", "consumed"] }).default("active").notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  url: text("url").notNull(),
+  createdBy: integer("created_by").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const subscriptionPlans = pgTable("subscription_plans", {
+export const scheduledExams = pgTable("scheduled_exams", {
   id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  description: text("description").notNull(),
-  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
-  duration: integer("duration").notNull(),
-  features: jsonb("features").notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  examPdfId: integer("exam_pdf_id").references(() => examPDFs.id).notNull(),
+  startTime: timestamp("start_time").notNull(),
+  duration: integer("duration").notNull(), 
+  totalMarks: integer("total_marks").notNull(),
+  status: text("status", { enum: ["scheduled", "in_progress", "completed", "cancelled"] }).default("scheduled").notNull(),
+  createdBy: integer("created_by").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const examSubmissions = pgTable("exam_submissions", {
+  id: serial("id").primaryKey(),
+  examId: integer("exam_id").references(() => scheduledExams.id).notNull(),
+  studentId: integer("student_id").references(() => users.id).notNull(),
+  submissionUrl: text("submission_url").notNull(),
+  submittedAt: timestamp("submitted_at").defaultNow().notNull(),
+  marksObtained: integer("marks_obtained"),
+  status: text("status", { enum: ["submitted", "graded", "late"] }).default("submitted").notNull(),
+  feedback: text("feedback"),
+});
+
+export const parentStudentRelations = pgTable("parent_student_relations", {
+  id: serial("id").primaryKey(),
+  parentId: integer("parent_id").references(() => users.id).notNull(),
+  studentId: integer("student_id").references(() => users.id).notNull(),
+  relation: text("relation").notNull(),
   isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const userSubscriptions = pgTable("user_subscriptions", {
+export const media = pgTable("media", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id).notNull(),
-  planId: integer("plan_id").references(() => subscriptionPlans.id).notNull(),
-  startDate: timestamp("start_date").notNull(),
-  endDate: timestamp("end_date").notNull(),
-  status: text("status", { enum: ["active", "expired", "cancelled"] }).default("active").notNull(),
-  paymentId: integer("payment_id").references(() => payments.id),
+  url: text("url").notNull(),
+  filename: text("filename").notNull(),
+  category: text("category").notNull(),
+  fileType: text("file_type").notNull(),
+  fileSize: integer("file_size").notNull(),
+  createdBy: integer("created_by").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// Create schemas for type safety
+export const liveClasses = pgTable("live_classes", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description"),
+  tutorId: integer("tutor_id").references(() => tutors.id).notNull(),
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time"),
+  maxParticipants: integer("max_participants"),
+  status: text("status", { enum: ["scheduled", "in_progress", "completed", "cancelled"] }).default("scheduled").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const classParticipants = pgTable("class_participants", {
+  id: serial("id").primaryKey(),
+  classId: integer("class_id").references(() => liveClasses.id).notNull(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  status: text("status", { enum: ["registered", "attended", "cancelled"] }).default("registered").notNull(),
+  registeredAt: timestamp("registered_at").defaultNow().notNull(),
+});
+
+export const recordedVideos = pgTable("recorded_videos", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description"),
+  url: text("url").notNull(),
+  classId: integer("class_id").references(() => liveClasses.id),
+  tutorId: integer("tutor_id").references(() => tutors.id).notNull(),
+  duration: integer("duration").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+
 export const insertUserSchema = createInsertSchema(users);
 export const selectUserSchema = createSelectSchema(users);
 export type InsertUser = typeof users.$inferInsert;
@@ -254,3 +310,43 @@ export const insertNotificationSchema = createInsertSchema(notifications);
 export const selectNotificationSchema = createSelectSchema(notifications);
 export type InsertNotification = typeof notifications.$inferInsert;
 export type SelectNotification = typeof notifications.$inferSelect;
+
+export const insertLiveClassSchema = createInsertSchema(liveClasses);
+export const selectLiveClassSchema = createSelectSchema(liveClasses);
+export type InsertLiveClass = typeof liveClasses.$inferInsert;
+export type SelectLiveClass = typeof liveClasses.$inferSelect;
+
+export const insertClassParticipantSchema = createInsertSchema(classParticipants);
+export const selectClassParticipantSchema = createSelectSchema(classParticipants);
+export type InsertClassParticipant = typeof classParticipants.$inferInsert;
+export type SelectClassParticipant = typeof classParticipants.$inferSelect;
+
+export const insertRecordedVideoSchema = createInsertSchema(recordedVideos);
+export const selectRecordedVideoSchema = createSelectSchema(recordedVideos);
+export type InsertRecordedVideo = typeof recordedVideos.$inferInsert;
+export type SelectRecordedVideo = typeof recordedVideos.$inferSelect;
+
+export const insertMediaSchema = createInsertSchema(media);
+export const selectMediaSchema = createSelectSchema(media);
+export type InsertMedia = typeof media.$inferInsert;
+export type SelectMedia = typeof media.$inferSelect;
+
+export const insertExamPDFSchema = createInsertSchema(examPDFs);
+export const selectExamPDFSchema = createSelectSchema(examPDFs);
+export type InsertExamPDF = typeof examPDFs.$inferInsert;
+export type SelectExamPDF = typeof examPDFs.$inferSelect;
+
+export const insertScheduledExamSchema = createInsertSchema(scheduledExams);
+export const selectScheduledExamSchema = createSelectSchema(scheduledExams);
+export type InsertScheduledExam = typeof scheduledExams.$inferInsert;
+export type SelectScheduledExam = typeof scheduledExams.$inferSelect;
+
+export const insertExamSubmissionSchema = createInsertSchema(examSubmissions);
+export const selectExamSubmissionSchema = createSelectSchema(examSubmissions);
+export type InsertExamSubmission = typeof examSubmissions.$inferInsert;
+export type SelectExamSubmission = typeof examSubmissions.$inferSelect;
+
+export const insertParentStudentRelationSchema = createInsertSchema(parentStudentRelations);
+export const selectParentStudentRelationSchema = createSelectSchema(parentStudentRelations);
+export type InsertParentStudentRelation = typeof parentStudentRelations.$inferInsert;
+export type SelectParentStudentRelation = typeof parentStudentRelations.$inferSelect;
