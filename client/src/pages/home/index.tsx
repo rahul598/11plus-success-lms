@@ -3,6 +3,7 @@ import { Hero } from "@/components/hero";
 import { VideoSection } from "@/components/video-section";
 import { FeatureSection } from "@/components/feature-section";
 import { TestimonialSection } from "@/components/testimonial-section";
+import { PricingSection } from "@/components/pricing-section";
 import { Footer } from "@/components/footer";
 
 export default function HomePage() {
@@ -13,6 +14,7 @@ export default function HomePage() {
       <VideoSection />
       <FeatureSection />
       <TestimonialSection />
+      <PricingSection />
       <Footer />
     </div>
   );
