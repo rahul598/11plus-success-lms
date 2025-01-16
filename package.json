@@ -87,6 +87,7 @@
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
     "stream-browserify": "^3.0.0",
+    "swiper": "^11.2.1",
     "tailwind-merge": "^2.5.4",
     "tailwindcss-animate": "^1.0.7",
     "util": "^0.12.5",

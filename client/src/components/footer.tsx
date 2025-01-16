@@ -1,20 +1,69 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Facebook, Instagram, Twitter } from "lucide-react";
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Autoplay } from 'swiper/modules';
+
+// Import Swiper styles
+import 'swiper/css';
+import 'swiper/css/autoplay';
+
+const instagramImages = [
+  "https://dtthemes.kinsta.cloud/a-for-apple/wp-content/uploads/sites/2/2024/02/home-4-instagram-image-101.jpg",
+  "https://dtthemes.kinsta.cloud/a-for-apple/wp-content/uploads/sites/2/2024/02/home-4-instagram-image-102.jpg",
+  "https://dtthemes.kinsta.cloud/a-for-apple/wp-content/uploads/sites/2/2024/02/home-4-instagram-image-103.jpg",
+  "https://dtthemes.kinsta.cloud/a-for-apple/wp-content/uploads/sites/2/2024/02/home-4-instagram-image-104.jpg",
+  "https://dtthemes.kinsta.cloud/a-for-apple/wp-content/uploads/sites/2/2024/02/home-4-instagram-image-105.jpg",
+  "https://dtthemes.kinsta.cloud/a-for-apple/wp-content/uploads/sites/2/2024/02/home-4-instagram-image-106.jpg"
+];
 
 export function Footer() {
   return (
     <footer className="bg-[#006D77] text-white">
       {/* Instagram Section */}
       <div className="container mx-auto py-12">
-        <h2 className="text-3xl font-bold text-center mb-8">Follow Instagram @11plus_success</h2>
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-12">
-          <img src="https://vinsonedge.com/wp-content/uploads/2025/01/insta-1.jpg" alt="Instagram post" className="w-full rounded-lg" />
-          <img src="https://vinsonedge.com/wp-content/uploads/2025/01/insta-2.jpg" alt="Instagram post" className="w-full rounded-lg" />
-          <img src="https://vinsonedge.com/wp-content/uploads/2025/01/insta-3.jpg" alt="Instagram post" className="w-full rounded-lg" />
-          <img src="https://vinsonedge.com/wp-content/uploads/2025/01/insta-4.jpg" alt="Instagram post" className="w-full rounded-lg" />
-          <img src="https://vinsonedge.com/wp-content/uploads/2025/01/insta-5.jpg" alt="Instagram post" className="w-full rounded-lg" />
-          <img src="https://vinsonedge.com/wp-content/uploads/2025/01/insta-6.jpg" alt="Instagram post" className="w-full rounded-lg" />
+        <h2 className="text-3xl font-bold text-center mb-8">
+          Follow Instagram @11plus_success
+        </h2>
+        <div className="mb-12">
+          <Swiper
+            modules={[Autoplay]}
+            spaceBetween={20}
+            slidesPerView={3}
+            loop={true}
+            autoplay={{
+              delay: 0,
+              disableOnInteraction: false,
+              pauseOnMouseEnter: false,
+              stopOnLastSlide: false,
+              reverseDirection: false
+            }}
+            speed={5000}
+            breakpoints={{
+              640: {
+                slidesPerView: 4,
+              },
+              768: {
+                slidesPerView: 5,
+              },
+              1024: {
+                slidesPerView: 6,
+              },
+            }}
+            className="instagram-feed-swiper"
+          >
+            {[...instagramImages, ...instagramImages].map((image, index) => (
+              <SwiperSlide key={index}>
+                <div className="h-[200px] bg-white rounded-lg overflow-hidden">
+                  <img 
+                    src={image} 
+                    alt={`Instagram post ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </SwiperSlide>
+            ))}
+          </Swiper>
         </div>
 
         {/* Wave Divider */}
@@ -58,9 +107,9 @@ export function Footer() {
             <h3 className="font-bold mb-4">Subscribe to Our Newsletter</h3>
             <p className="text-sm mb-4">Get latest updates and latest news.</p>
             <div className="flex gap-2">
-              <Input 
-                type="email" 
-                placeholder="Enter Your Email" 
+              <Input
+                type="email"
+                placeholder="Enter Your Email"
                 className="bg-white text-black"
               />
               <Button className="bg-[#32DBC9] hover:bg-[#2BC4B4]">
@@ -73,7 +122,9 @@ export function Footer() {
         {/* Social Media & Copyright */}
         <div className="border-t border-white/20 pt-8 mt-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
-            <p className="text-sm mb-4 md:mb-0">© 2025 11Plus Success. All Rights Reserved.</p>
+            <p className="text-sm mb-4 md:mb-0">
+              © 2025 11Plus Success. All Rights Reserved.
+            </p>
             <div className="flex space-x-4">
               <a href="#" className="hover:text-[#32DBC9]">
                 <Facebook className="h-5 w-5" />
