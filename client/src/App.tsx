@@ -13,18 +13,24 @@ import LoginPage from "@/pages/auth/login";
 import SignupPage from "@/pages/auth/signup";
 import CartPage from "@/pages/cart";
 import CheckoutPage from "@/pages/checkout";
+
+// Admin Dashboard Pages
 import AdminDashboard from "@/pages/dashboard/admin";
-import AdminAnalyticsPage from "@/pages/dashboard/admin/analytics";
-import AdminReportsPage from "@/pages/dashboard/admin/reports";
 import AdminUsersPage from "@/pages/dashboard/admin/users";
+import AdminQuestionsPage from "@/pages/dashboard/admin/questions";
+import AdminClassLivePage from "@/pages/dashboard/admin/classes/live";
+import AdminClassRecordedPage from "@/pages/dashboard/admin/classes/recorded";
+import AdminClassSchedulePage from "@/pages/dashboard/admin/classes/schedule";
 import AdminProductsPage from "@/pages/dashboard/admin/products";
+import AdminProductCategoriesPage from "@/pages/dashboard/admin/products/categories";
+import AdminOrdersPage from "@/pages/dashboard/admin/products/orders";
+import AdminMediaPage from "@/pages/dashboard/admin/media";
 import AdminSubscriptionsPage from "@/pages/dashboard/admin/subscriptions";
 import AdminPaymentsPage from "@/pages/dashboard/admin/payments";
 import AdminTutorsPage from "@/pages/dashboard/admin/tutors";
 import AdminCoursesPage from "@/pages/dashboard/admin/courses";
 import AdminMockTestsPage from "@/pages/dashboard/admin/mock-tests";
 import AdminSettingsPage from "@/pages/dashboard/admin/settings";
-
 
 function Router() {
   return (
@@ -43,10 +49,21 @@ function Router() {
 
       {/* Admin Dashboard Routes */}
       <Route path="/dashboard/admin" component={AdminDashboard} />
-      <Route path="/dashboard/admin/analytics" component={AdminAnalyticsPage} />
-      <Route path="/dashboard/admin/reports" component={AdminReportsPage} />
       <Route path="/dashboard/admin/users" component={AdminUsersPage} />
+      <Route path="/dashboard/admin/questions" component={AdminQuestionsPage} />
+
+      {/* Class Management Routes */}
+      <Route path="/dashboard/admin/classes/live" component={AdminClassLivePage} />
+      <Route path="/dashboard/admin/classes/recorded" component={AdminClassRecordedPage} />
+      <Route path="/dashboard/admin/classes/schedule" component={AdminClassSchedulePage} />
+
+      {/* E-Commerce Routes */}
       <Route path="/dashboard/admin/products" component={AdminProductsPage} />
+      <Route path="/dashboard/admin/products/categories" component={AdminProductCategoriesPage} />
+      <Route path="/dashboard/admin/products/orders" component={AdminOrdersPage} />
+
+      {/* Other Admin Routes */}
+      <Route path="/dashboard/admin/media" component={AdminMediaPage} />
       <Route path="/dashboard/admin/subscriptions" component={AdminSubscriptionsPage} />
       <Route path="/dashboard/admin/payments" component={AdminPaymentsPage} />
       <Route path="/dashboard/admin/tutors" component={AdminTutorsPage} />
