@@ -14,8 +14,8 @@ export function PricingSection() {
         "Lorem ipsum dolor Lorem",
         "Lorem ipsum dolor",
         "Lorem ipsum dolor Lorem",
-        "Lorem ipsum dolor Lorem"
-      ]
+        "Lorem ipsum dolor Lorem",
+      ],
     },
     {
       name: "Popular",
@@ -26,9 +26,9 @@ export function PricingSection() {
         "Lorem ipsum dolor Lorem",
         "Lorem ipsum dolor Lorem",
         "Lorem ipsum dolor Lorem",
-        "Lorem ipsum dolor Lorem"
+        "Lorem ipsum dolor Lorem",
       ],
-      highlight: true
+      highlight: true,
     },
     {
       name: "Pro Plan",
@@ -39,9 +39,9 @@ export function PricingSection() {
         "Lorem ipsum dolor Lorem",
         "Lorem ipsum dolor Lorem",
         "Lorem ipsum dolor Lorem",
-        "Lorem ipsum dolor Lorem"
-      ]
-    }
+        "Lorem ipsum dolor Lorem",
+      ],
+    },
   ];
 
   return (
@@ -57,7 +57,7 @@ export function PricingSection() {
           </h2>
         </motion.div>
 
-        <Tabs defaultValue="monthly" className="w-full max-w-md mx-auto">
+        <Tabs defaultValue="monthly" className="w-full mx-auto">
           <TabsList className="grid w-full grid-cols-4 bg-[#E6FAF8] rounded-full p-1">
             <TabsTrigger
               value="monthly"
@@ -94,20 +94,30 @@ export function PricingSection() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: index * 0.2 }}
                 >
-                  <Card className={`p-6 h-full ${plan.highlight ? 'bg-gradient-to-br from-[#E6FAF8] to-white border-2 border-[#32DBC9]/20' : 'bg-white'}`}>
+                  <Card
+                    className={`p-6 h-full ${plan.highlight ? "bg-gradient-to-br from-[#E6FAF8] to-white border-2 border-[#32DBC9]/20" : "bg-white"}`}
+                  >
                     <div className="flex flex-col h-full">
-                      <div className="text-sm text-gray-500 mb-2">Basic Plan</div>
+                      <div className="text-sm text-gray-500 mb-2">
+                        Basic Plan
+                      </div>
                       <div className="flex items-baseline mb-6">
-                        <span className="text-2xl font-semibold text-[#2D3648]">$</span>
-                        <span className="text-4xl font-bold text-[#2D3648] mx-1">{plan.monthlyPrice}</span>
+                        <span className="text-2xl font-semibold text-[#2D3648]">
+                          $
+                        </span>
+                        <span className="text-4xl font-bold text-[#2D3648] mx-1">
+                          {plan.monthlyPrice}
+                        </span>
                         <span className="text-gray-500">/month</span>
                       </div>
-                      
+
                       <ul className="space-y-4 mb-8 flex-grow">
                         {plan.features.map((feature, i) => (
                           <li key={i} className="flex items-center gap-2">
                             <Check className="h-5 w-5 text-[#32DBC9]" />
-                            <span className="text-[#545F71] text-sm">{feature}</span>
+                            <span className="text-[#545F71] text-sm">
+                              {feature}
+                            </span>
                           </li>
                         ))}
                       </ul>
@@ -115,8 +125,8 @@ export function PricingSection() {
                       <Button
                         className={`w-full ${
                           plan.highlight
-                            ? 'bg-[#32DBC9] hover:bg-[#2BC4B4] text-white'
-                            : 'bg-white border-2 border-[#32DBC9] text-[#32DBC9] hover:bg-[#E6FAF8]'
+                            ? "bg-[#32DBC9] hover:bg-[#2BC4B4] text-white"
+                            : "bg-white border-2 border-[#32DBC9] text-[#32DBC9] hover:bg-[#E6FAF8]"
                         }`}
                       >
                         Sign up now
