@@ -8,9 +8,37 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   email: text("email").unique().notNull(),
   role: text("role", { enum: ["admin", "tutor", "parent", "student"] }).default("student").notNull(),
-  avatar: text("avatar"),
   lastLogin: timestamp("last_login"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const payments = pgTable("payments", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  status: text("status", { enum: ["pending", "completed", "failed"] }).notNull(),
+  type: text("type", { enum: ["course", "subscription"] }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const subscriptionPlans = pgTable("subscription_plans", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  duration: integer("duration").notNull(), // in days
+  features: jsonb("features").notNull(),
+  isActive: boolean("is_active").default(true).notNull()
+});
+
+export const userSubscriptions = pgTable("user_subscriptions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  planId: integer("plan_id").references(() => subscriptionPlans.id).notNull(),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  status: text("status", { enum: ["active", "expired", "cancelled"] }).default("active").notNull(),
+  paymentId: integer("payment_id").references(() => payments.id)
 });
 
 export const courses = pgTable("courses", {
@@ -31,15 +59,6 @@ export const tutors = pgTable("tutors", {
   hourlyRate: decimal("hourly_rate", { precision: 10, scale: 2 }).notNull(),
   available: boolean("available").default(true).notNull(),
   rating: decimal("rating", { precision: 3, scale: 2 }),
-});
-
-export const payments = pgTable("payments", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id).notNull(),
-  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
-  status: text("status", { enum: ["pending", "completed", "failed"] }).notNull(),
-  type: text("type", { enum: ["course", "subscription"] }).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const studentProgress = pgTable("student_progress", {
@@ -224,26 +243,6 @@ export const studentRewards = pgTable("student_rewards", {
   rewardId: integer("reward_id").references(() => rewards.id).notNull(),
   earnedAt: timestamp("earned_at").defaultNow().notNull(),
   status: text("status", { enum: ["active", "expired", "consumed"] }).default("active").notNull(),
-});
-
-export const subscriptionPlans = pgTable("subscription_plans", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  description: text("description").notNull(),
-  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
-  duration: integer("duration").notNull(),
-  features: jsonb("features").notNull(),
-  isActive: boolean("is_active").default(true).notNull(),
-});
-
-export const userSubscriptions = pgTable("user_subscriptions", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id).notNull(),
-  planId: integer("plan_id").references(() => subscriptionPlans.id).notNull(),
-  startDate: timestamp("start_date").notNull(),
-  endDate: timestamp("end_date").notNull(),
-  status: text("status", { enum: ["active", "expired", "cancelled"] }).default("active").notNull(),
-  paymentId: integer("payment_id").references(() => payments.id),
 });
 
 export const media = pgTable("media", {

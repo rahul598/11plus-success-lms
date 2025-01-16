@@ -95,14 +95,38 @@ function requireAdmin(req: express.Request, res: express.Response, next: express
   res.status(403).send("Forbidden");
 }
 
-// Add this middleware after the existing requireAuth and requireAdmin middleware
+async function checkSubscriptionAccess(userId: number, feature: string): Promise<boolean> {
+  const activeSubscription = await db
+    .select()
+    .from(userSubscriptions)
+    .where(
+      and(
+        eq(userSubscriptions.userId, userId),
+        eq(userSubscriptions.status, "active")
+      )
+    )
+    .innerJoin(
+      subscriptionPlans,
+      eq(userSubscriptions.planId, subscriptionPlans.id)
+    )
+    .limit(1);
+
+  if (!activeSubscription.length) {
+    return false;
+  }
+
+  // Check if the subscription plan includes the requested feature
+  const plan = activeSubscription[0].subscription_plans;
+  const features = plan.features as Record<string, boolean>;
+  return features[feature] === true;
+}
+
 function requireSubscription(feature: string) {
-  return async (req: express.Request & { user?: express.User }, res: express.Response, next: express.NextFunction) => {
+  return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     if (!req.user) {
       return res.status(401).send("Unauthorized");
     }
 
-    // Admin users bypass subscription check
     if (req.user.role === "admin") {
       return next();
     }
@@ -577,7 +601,6 @@ export function registerRoutes(app: Express): Server {
           customerEmail: users.email,
           amount: payments.amount,
           date: payments.createdAt,
-          avatar: users.avatar,
         })
         .from(payments)
         .innerJoin(users, eq(users.id, payments.userId))
@@ -588,7 +611,7 @@ export function registerRoutes(app: Express): Server {
       res.json(recentSales);
     } catch (error: any) {
       console.error("Error fetching recent sales:", error);
-      res.status(500).send(error.message);
+      res.status(500).send("Failed to fetch recent sales");
     }
   });
 
@@ -958,7 +981,7 @@ export function registerRoutes(app: Express): Server {
 
   // Get question statistics
   app.get("/api/questions/stats", requireAuth, async (_req, res) => {
-        try {
+    try {
       const [{ total }] = await db
         .select({
           total: sql<number>`count(*)`,
@@ -1103,43 +1126,71 @@ export function registerRoutes(app: Express): Server {
 
   // Add the following after other routes and before events routes
 
-  // Subscription Routes
-  app.get("/api/user/subscriptions", requireAuth, async (req: express.Request & { user?: express.User }, res) => {
-    if (!req.user) {
-      return res.status(401).send("Unauthorized");
-    }
-
+  // Subscription routes
+  app.get("/api/subscriptions", requireAuth, async (req, res) => {
     try {
-      const userSubscription = await db
+      const { user } = req;
+      if (!user) {
+        return res.status(401).send("Unauthorized");
+      }
+
+      // Get active subscription if exists
+      const activeSubscription = await db
         .select({
-          subscription: {
-            id: userSubscriptions.id,
-            startDate: userSubscriptions.startDate,
-            endDate: userSubscriptions.endDate,
-            status: userSubscriptions.status,
-          },
-          plan: {
-            id: subscriptionPlans.id,
-            name: subscriptionPlans.name,
-            tier: subscriptionPlans.tier,
-            features: subscriptionPlans.features,
-          },
+          subscription: userSubscriptions,
+          plan: subscriptionPlans
         })
         .from(userSubscriptions)
-        .innerJoin(subscriptionPlans, eq(subscriptionPlans.id, userSubscriptions.planId))
+        .innerJoin(
+          subscriptionPlans,
+          eq(userSubscriptions.planId, subscriptionPlans.id)
+        )
         .where(
           and(
-            eq(userSubscriptions.userId, req.user.id),
+            eq(userSubscriptions.userId, user.id),
             eq(userSubscriptions.status, "active")
           )
         )
-        .orderBy(desc(userSubscriptions.startDate))
         .limit(1);
 
-      res.json(userSubscription);
-    } catch (error: any) {
-      console.error("Error fetching user subscriptions:", error);
-      res.status(500).send(error.message);
+      // Get all available plans
+      const allPlans = await db
+        .select()
+        .from(subscriptionPlans)
+        .where(eq(subscriptionPlans.isActive, true))
+        .orderBy(subscriptionPlans.price);
+
+      res.json({
+        currentSubscription: activeSubscription[0] || null,
+        availablePlans: allPlans
+      });
+    } catch (error) {
+      console.error("Error fetching subscriptions:", error);
+      res.status(500).send("Failed to fetch subscription information");
+    }
+  });
+
+  // Recent Sales
+  app.get("/api/sales/recent", requireAdmin, async (_req, res) => {
+    try {
+      const recentSales = await db
+        .select({
+          id: payments.id,
+          customerName: users.username,
+          customerEmail: users.email,
+          amount: payments.amount,
+          date: payments.createdAt,
+        })
+        .from(payments)
+        .innerJoin(users, eq(users.id, payments.userId))
+        .where(eq(payments.status, "completed"))
+        .orderBy(desc(payments.createdAt))
+        .limit(5);
+
+      res.json(recentSales);
+    } catch (error) {
+      console.error("Error fetching recent sales:", error);
+      res.status(500).send("Failed to fetch recent sales");
     }
   });
 
