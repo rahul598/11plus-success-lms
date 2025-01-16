@@ -13,9 +13,6 @@ import LoginPage from "@/pages/auth/login";
 import SignupPage from "@/pages/auth/signup";
 import CartPage from "@/pages/cart";
 import CheckoutPage from "@/pages/checkout";
-import StudentDashboard from "@/pages/dashboard/student";
-import ParentDashboard from "@/pages/dashboard/parent";
-import TutorDashboard from "@/pages/dashboard/tutor";
 import AdminDashboard from "@/pages/dashboard/admin";
 import AdminAnalyticsPage from "@/pages/dashboard/admin/analytics";
 import AdminReportsPage from "@/pages/dashboard/admin/reports";
@@ -27,122 +24,39 @@ import AdminTutorsPage from "@/pages/dashboard/admin/tutors";
 import AdminCoursesPage from "@/pages/dashboard/admin/courses";
 import AdminMockTestsPage from "@/pages/dashboard/admin/mock-tests";
 import AdminSettingsPage from "@/pages/dashboard/admin/settings";
-import { useUser } from "@/hooks/use-user";
-import { useEffect } from "react";
-import { useLocation } from "wouter";
 
-function getDashboardRoute(role?: string) {
-  switch (role) {
-    case "student":
-      return "/dashboard/student";
-    case "tutor":
-      return "/dashboard/tutor";
-    case "parent":
-      return "/dashboard/parent";
-    case "admin":
-      return "/dashboard/admin";
-    default:
-      return "/auth/login";
-  }
-}
 
 function Router() {
-  const { user, isLoading } = useUser();
-  const [location, setLocation] = useLocation();
-
-  useEffect(() => {
-    if (user) {
-      const dashboardRoute = getDashboardRoute(user.role);
-      if (location === "/" || location === "/auth/login") {
-        setLocation(dashboardRoute);
-      }
-    }
-  }, [user, location, setLocation]);
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen flex flex-col">
-      <main className="flex-1">
-        <Switch>
-          {/* Public Routes */}
-          <Route path="/" component={HomePage} />
-          <Route path="/mock-exams" component={MockExamsPage} />
-          <Route path="/reports" component={ReportsPage} />
-          <Route path="/tution" component={TutionPage} />
-          <Route path="/about-us" component={AboutUsPage} />
-          <Route path="/contact-us" component={ContactUsPage} />
-          <Route path="/auth/login" component={LoginPage} />
-          <Route path="/auth/signup" component={SignupPage} />
-          <Route path="/cart" component={CartPage} />
-          <Route path="/checkout" component={CheckoutPage} />
+    <Switch>
+      {/* Public Routes */}
+      <Route path="/" component={HomePage} />
+      <Route path="/mock-exams" component={MockExamsPage} />
+      <Route path="/reports" component={ReportsPage} />
+      <Route path="/tution" component={TutionPage} />
+      <Route path="/about-us" component={AboutUsPage} />
+      <Route path="/contact-us" component={ContactUsPage} />
+      <Route path="/auth/login" component={LoginPage} />
+      <Route path="/auth/signup" component={SignupPage} />
+      <Route path="/cart" component={CartPage} />
+      <Route path="/checkout" component={CheckoutPage} />
 
-          {/* Protected Routes - Only accessible when logged in */}
-          {user ? (
-            <>
-              {/* Student Dashboard */}
-              {user.role === "student" && (
-                <Route path="/dashboard/student" component={StudentDashboard} />
-              )}
+      {/* Admin Dashboard Routes */}
+      <Route path="/dashboard/admin" component={AdminDashboard} />
+      <Route path="/dashboard/admin/analytics" component={AdminAnalyticsPage} />
+      <Route path="/dashboard/admin/reports" component={AdminReportsPage} />
+      <Route path="/dashboard/admin/users" component={AdminUsersPage} />
+      <Route path="/dashboard/admin/products" component={AdminProductsPage} />
+      <Route path="/dashboard/admin/subscriptions" component={AdminSubscriptionsPage} />
+      <Route path="/dashboard/admin/payments" component={AdminPaymentsPage} />
+      <Route path="/dashboard/admin/tutors" component={AdminTutorsPage} />
+      <Route path="/dashboard/admin/courses" component={AdminCoursesPage} />
+      <Route path="/dashboard/admin/mock-tests" component={AdminMockTestsPage} />
+      <Route path="/dashboard/admin/settings" component={AdminSettingsPage} />
 
-              {/* Tutor Dashboard */}
-              {user.role === "tutor" && (
-                <Route path="/dashboard/tutor" component={TutorDashboard} />
-              )}
-
-              {/* Parent Dashboard */}
-              {user.role === "parent" && (
-                <Route path="/dashboard/parent" component={ParentDashboard} />
-              )}
-
-              {/* Admin Dashboard */}
-              {user.role === "admin" && (
-                <>
-                  <Route path="/dashboard/admin" component={AdminDashboard} />
-                  <Route path="/dashboard/admin/analytics" component={AdminAnalyticsPage} />
-                  <Route path="/dashboard/admin/reports" component={AdminReportsPage} />
-                  <Route path="/dashboard/admin/users" component={AdminUsersPage} />
-                  <Route path="/dashboard/admin/products" component={AdminProductsPage} />
-                  <Route path="/dashboard/admin/subscriptions" component={AdminSubscriptionsPage} />
-                  <Route path="/dashboard/admin/payments" component={AdminPaymentsPage} />
-                  <Route path="/dashboard/admin/tutors" component={AdminTutorsPage} />
-                  <Route path="/dashboard/admin/courses" component={AdminCoursesPage} />
-                  <Route path="/dashboard/admin/mock-tests" component={AdminMockTestsPage} />
-                  <Route path="/dashboard/admin/settings" component={AdminSettingsPage} />
-                </>
-              )}
-
-              {/* If accessing wrong dashboard routes, redirect to correct one */}
-              <Route path="/dashboard/*">
-                {() => {
-                  const correctDashboard = getDashboardRoute(user.role);
-                  if (!location.startsWith(correctDashboard)) {
-                    setLocation(correctDashboard);
-                  }
-                  return null;
-                }}
-              </Route>
-            </>
-          ) : (
-            // Redirect to login if not authenticated
-            <Route path="/dashboard/*">
-              {() => {
-                setLocation("/auth/login");
-                return null;
-              }}
-            </Route>
-          )}
-
-          <Route component={NotFound} />
-        </Switch>
-      </main>
-    </div>
+      {/* Fallback to 404 */}
+      <Route component={NotFound} />
+    </Switch>
   );
 }
 
