@@ -29,7 +29,7 @@ export function Hero() {
       <motion.img
         src="https://vinsonedge.com/wp-content/uploads/2025/01/rotating-star-01-3.png"
         alt="Star decoration"
-        className="absolute left-[20%] top-[15%] w-4 h-4"
+        className="absolute left-[20%] top-[15%] w-8 h-8"
         animate={{
           rotate: -360,
           scale: [1, 1.3, 1],
@@ -50,23 +50,17 @@ export function Hero() {
 
       {/* Small Star */}
       <motion.img
-        src="https://vinsonedge.com/wp-content/uploads/2025/01/star-slider-01.png"
+        src="https://vinsonedge.com/wp-content/uploads/2025/01/rotating-star-01-3-1-1.png"
         alt="Star decoration"
-        className="absolute right-[30%] bottom-[30%] w-3 h-3"
+        className="absolute right-[55%] bottom-[23%] w-8 h-8"
         animate={{
           rotate: 360,
-          scale: [1, 1.4, 1],
         }}
         transition={{
           rotate: {
-            duration: 15,
+            duration: 4,
             repeat: Infinity,
             ease: "linear",
-          },
-          scale: {
-            duration: 2.5,
-            repeat: Infinity,
-            ease: "easeInOut",
           },
         }}
       />
@@ -119,17 +113,34 @@ export function Hero() {
               <motion.img
                 src="https://vinsonedge.com/wp-content/uploads/2025/01/slider-2-char-1.png"
                 alt="Student"
-                className="w-full"
+                className="relative z-20 w-full "
                 initial={{ opacity: 0, x: 100 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.8, delay: 0.6 }}
+              />
+
+              {/* Moving Circle */}
+              <motion.img
+                src="https://dtthemes.kinsta.cloud/a-for-apple/wp-content/uploads/sites/2/2024/02/slider-2-circel.webp"
+                alt="Moving Circle"
+                className="z-10 absolute right-[-5%] min-w-[450px] top-[10%] filter grayscale brightness-0 invert" /* Added min-w-[450px] */
+                animate={{
+                  rotate: 360,
+                }}
+                transition={{
+                  rotate: {
+                    duration: 20,
+                    repeat: Infinity,
+                    ease: "linear",
+                  },
+                }}
               />
 
               {/* Floating backpack */}
               <motion.img
                 src="https://vinsonedge.com/wp-content/uploads/2025/01/Bag-slider-01-1.png"
                 alt="Floating backpack"
-                className="absolute left-[-39%] bottom-[0%] w-64 h-64"
+                className="absolute left-[-59%] bottom-[-8%] w-64 h-64"
                 animate={{
                   y: [0, -20, 0],
                 }}
