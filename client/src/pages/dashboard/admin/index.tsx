@@ -30,7 +30,7 @@ interface Stats {
 
 export default function AdminDashboard() {
   const { data: stats } = useQuery<Stats>({
-    queryKey: ["/api/admin/stats"],
+    queryKey: ["/api/stats"],
   });
 
   return (
@@ -102,7 +102,7 @@ export default function AdminDashboard() {
                 <CardHeader>
                   <CardTitle>Recent Sales</CardTitle>
                   <CardDescription>
-                    Recent subscription purchases
+                    You made 265 sales this month.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
