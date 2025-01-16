@@ -4,17 +4,13 @@ import { ArrowRight } from "lucide-react";
 
 export function Hero() {
   return (
-    <section className="relative min-h-screen pt-32 overflow-hidden bg-gradient-to-b from-[#E6FAF8] to-white">
+    <section className="relative min-h-screens pt-32 overflow-hidden bg-gradient-to-b from-[#E6FAF8] to-white">
       {/* Background decorations */}
       <div className="elemenBackgroundOverlay"></div>
       <motion.img
-        src="https://vinsonedge.com/wp-content/uploads/2025/01/rotating-star-01-3.png"
+        src="https://vinsonedge.com/wp-content/uploads/2025/01/star-slider-01.png"
         alt="Star background"
-        className="absolute right-[10%] top-[20%] w-8 h-8"
-        animate={{
-          rotate: 360,
-          scale: [1, 1.2, 1],
-        }}
+        className="absolute right-[5%] top-[26%] w-16 h-16"
         transition={{
           rotate: {
             duration: 20,
@@ -54,7 +50,7 @@ export function Hero() {
 
       {/* Small Star */}
       <motion.img
-        src="https://vinsonedge.com/wp-content/uploads/2025/01/rotating-star-01-3.png"
+        src="https://vinsonedge.com/wp-content/uploads/2025/01/star-slider-01.png"
         alt="Star decoration"
         className="absolute right-[30%] bottom-[30%] w-3 h-3"
         animate={{
@@ -72,21 +68,6 @@ export function Hero() {
             repeat: Infinity,
             ease: "easeInOut",
           },
-        }}
-      />
-
-      {/* Floating backpack */}
-      <motion.img
-        src="https://vinsonedge.com/wp-content/uploads/2025/01/Bag-slider-01-1.png"
-        alt="Floating backpack"
-        className="absolute left-[15%] bottom-[30%] w-24 h-24"
-        animate={{
-          y: [0, -20, 0],
-        }}
-        transition={{
-          duration: 3,
-          repeat: Infinity,
-          ease: "easeInOut",
         }}
       />
 
@@ -109,7 +90,11 @@ export function Hero() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
             >
-              11 Plus preparation you can trust
+              Boost your chances of securing a place at a Trafford Grammar with
+              11Plus Success! With decades of experience specialising in 11+
+              preparation, our services are student-focused to develop skills
+              that will maximise your chances of success in the ever-competitive
+              Trafford Examination process
             </motion.p>
 
             <motion.div
@@ -119,7 +104,7 @@ export function Hero() {
             >
               <Button
                 size="lg"
-                className="relative bg-[#32DBC9] hover:bg-[#2BC4B4] text-white px-8 py-4 text-lg rounded-full shadow-md hover:shadow-lg transition-all duration-300"
+                className="relative mbtn transition-all duration-300"
               >
                 <span className="absolute -bottom-1 left-0 right-0 mx-auto h-2 w-full bg-[#14756F] rounded-full blur-md -z-10"></span>
                 Book Your Mock Exam Now
@@ -130,14 +115,31 @@ export function Hero() {
 
           {/* Image Column (4/12) */}
           <div className="col-span-12 lg:col-span-4">
-            <motion.img
-              src="https://vinsonedge.com/wp-content/uploads/2025/01/slider-2-char-1.png"
-              alt="Student"
-              className="w-full"
-              initial={{ opacity: 0, x: 100 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8, delay: 0.6 }}
-            />
+            <div className="relative">
+              <motion.img
+                src="https://vinsonedge.com/wp-content/uploads/2025/01/slider-2-char-1.png"
+                alt="Student"
+                className="w-full"
+                initial={{ opacity: 0, x: 100 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.8, delay: 0.6 }}
+              />
+
+              {/* Floating backpack */}
+              <motion.img
+                src="https://vinsonedge.com/wp-content/uploads/2025/01/Bag-slider-01-1.png"
+                alt="Floating backpack"
+                className="absolute left-[-39%] bottom-[0%] w-64 h-64"
+                animate={{
+                  y: [0, -20, 0],
+                }}
+                transition={{
+                  duration: 3,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+              />
+            </div>
           </div>
         </div>
       </div>

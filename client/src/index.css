@@ -14,7 +14,12 @@
     font-family: 'Inter', sans-serif;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: 'Rowdies', display;
   }
 }
@@ -62,9 +67,11 @@
   0% {
     transform: translateY(0px);
   }
+
   50% {
     transform: translateY(-20px);
   }
+
   100% {
     transform: translateY(0px);
   }
@@ -86,7 +93,7 @@
   @apply text-base text-[#545F71];
 }
 
-.min-h-screen {
+.min-h-screens {
   background-image: url(https://vinsonedge.com/wp-content/uploads/2025/01/BG.png);
   background-position: center center;
   background-repeat: no-repeat;
@@ -105,4 +112,22 @@
   top: 0;
   left: 0;
   position: absolute;
+}
+
+.mbtn {
+  font-family: 'Rowdies', display;
+  font-size: 18px;
+  font-weight: 400;
+  padding: clamp(1.25rem, 1.1779rem + 0.3205vw, 1.5625rem);
+  color: #fff;
+  background-color: #4BC7C8;
+  border: 1px solid #000000;
+  box-shadow: 3px 3px 0 0 #000000;
+  border-radius: 25px;
+}
+
+.mbtn:hover {
+  background-color: #4BC7C8;
+  box-shadow: 0px #9e9e9e;
+  border-color: transparent;
 }

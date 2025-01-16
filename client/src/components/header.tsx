@@ -54,7 +54,7 @@ export function Header() {
 
   return (
     <header
-      className={`fixed top-0 left-0 w-full z-50 transition-colors duration-300 ${
+      className={`fixed top-0 left-0 w-full p-4 z-50 transition-colors duration-300 ${
         isScrolled ? "bg-white shadow-md" : "bg-transparent"
       }`}
     >
@@ -65,7 +65,7 @@ export function Header() {
             <img
               src="https://vinsonedge.com/wp-content/uploads/2025/01/Logo-3.png"
               alt="11Plus Success"
-              className="h-10 cursor-pointer"
+              className="h-16 cursor-pointer"
             />
           </Link>
 
@@ -115,7 +115,7 @@ export function Header() {
               <>
                 <Link href="/cart">
                   <Button variant="ghost" size="icon" className="relative">
-                    <img 
+                    <img
                       src="https://vinsonedge.com/wp-content/uploads/2025/01/Cart.png"
                       alt="Cart"
                       className="h-5 w-5"
@@ -157,7 +157,7 @@ export function Header() {
               <>
                 <Link href="/cart">
                   <Button variant="ghost" size="icon" className="relative">
-                    <img 
+                    <img
                       src="https://vinsonedge.com/wp-content/uploads/2025/01/Cart.png"
                       alt="Cart"
                       className="h-5 w-5"
