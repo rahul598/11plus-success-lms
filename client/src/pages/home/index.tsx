@@ -5,6 +5,7 @@ import { FeatureSection } from "@/components/feature-section";
 import { TestimonialSection } from "@/components/testimonial-section";
 import { PricingSection } from "@/components/pricing-section";
 import { ResultsSection } from "@/components/results-section";
+import { WhyChooseSection } from "@/components/why-choose-section";
 import { Footer } from "@/components/footer";
 
 export default function HomePage() {
@@ -17,6 +18,7 @@ export default function HomePage() {
       <TestimonialSection />
       <PricingSection />
       <ResultsSection />
+      <WhyChooseSection />
       <Footer />
     </div>
   );
