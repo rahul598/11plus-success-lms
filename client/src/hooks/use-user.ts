@@ -59,6 +59,21 @@ async function fetchUser(): Promise<SelectUser | null> {
   return response.json();
 }
 
+function getDashboardRoute(role?: string) {
+  switch (role) {
+    case "student":
+      return "/dashboard/student";
+    case "tutor":
+      return "/dashboard/tutor";
+    case "parent":
+      return "/dashboard/parent";
+    case "admin":
+      return "/dashboard/admin";
+    default:
+      return "/auth/login";
+  }
+}
+
 export function useUser() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -73,14 +88,15 @@ export function useUser() {
   const loginMutation = useMutation<RequestResult, Error, InsertUser>({
     mutationFn: (userData) => handleRequest('/api/login', 'POST', userData),
     onSuccess: (data) => {
-      if (data.ok) {
+      if (data.ok && data.user) {
         queryClient.invalidateQueries({ queryKey: ['user'] });
         toast({
           title: "Success",
           description: "Successfully logged in",
         });
-        // Add page refresh after successful login
-        window.location.reload();
+        // Redirect to the appropriate dashboard based on user role
+        const dashboardRoute = getDashboardRoute(data.user.role);
+        window.location.href = dashboardRoute;
       }
     },
   });
