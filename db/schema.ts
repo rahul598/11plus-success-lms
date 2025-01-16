@@ -1,5 +1,6 @@
 import { pgTable, text, serial, integer, boolean, timestamp, decimal, jsonb, date } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
+import { sql } from "drizzle-orm";
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -60,6 +61,30 @@ export const questions = pgTable("questions", {
   correctAnswer: integer("correct_answer").notNull(),
   createdBy: integer("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const events = pgTable("events", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description"),
+  type: text("type", { enum: ["exam", "workshop", "deadline", "other"] }).notNull(),
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time"),
+  location: text("location"),
+  capacity: integer("capacity"),
+  enrolledCount: integer("enrolled_count").default(0),
+  status: text("status", { enum: ["scheduled", "in_progress", "completed", "cancelled"] }).default("scheduled").notNull(),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const eventParticipants = pgTable("event_participants", {
+  id: serial("id").primaryKey(),
+  eventId: integer("event_id").references(() => events.id).notNull(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  role: text("role", { enum: ["attendee", "presenter", "organizer"] }).default("attendee").notNull(),
+  status: text("status", { enum: ["registered", "attended", "cancelled", "no_show"] }).default("registered").notNull(),
+  registeredAt: timestamp("registered_at").defaultNow().notNull(),
 });
 
 export const mockTests = pgTable("mock_tests", {
@@ -130,6 +155,17 @@ export const studentEngagement = pgTable("student_engagement", {
   correctAnswers: integer("correct_answers").default(0).notNull(),
   participationScore: decimal("participation_score", { precision: 5, scale: 2 }).default("0").notNull(),
   lastUpdated: timestamp("last_updated").defaultNow().notNull(),
+});
+
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  type: text("type", { enum: ["event", "result", "system", "message"] }).notNull(),
+  status: text("status", { enum: ["unread", "read", "archived"] }).default("unread").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  readAt: timestamp("read_at"),
 });
 
 export const rewards = pgTable("rewards", {
@@ -203,3 +239,18 @@ export const insertUserSubscriptionSchema = createInsertSchema(userSubscriptions
 export const selectUserSubscriptionSchema = createSelectSchema(userSubscriptions);
 export type InsertUserSubscription = typeof userSubscriptions.$inferInsert;
 export type SelectUserSubscription = typeof userSubscriptions.$inferSelect;
+
+export const insertEventSchema = createInsertSchema(events);
+export const selectEventSchema = createSelectSchema(events);
+export type InsertEvent = typeof events.$inferInsert;
+export type SelectEvent = typeof events.$inferSelect;
+
+export const insertEventParticipantSchema = createInsertSchema(eventParticipants);
+export const selectEventParticipantSchema = createSelectSchema(eventParticipants);
+export type InsertEventParticipant = typeof eventParticipants.$inferInsert;
+export type SelectEventParticipant = typeof eventParticipants.$inferSelect;
+
+export const insertNotificationSchema = createInsertSchema(notifications);
+export const selectNotificationSchema = createSelectSchema(notifications);
+export type InsertNotification = typeof notifications.$inferInsert;
+export type SelectNotification = typeof notifications.$inferSelect;

@@ -26,7 +26,14 @@ import {
   products,
   questionCategories,
   quizzes,
-  quizQuestions
+  quizQuestions,
+  liveClasses,
+  classParticipants,
+  recordedVideos,
+  examPDFs,
+  scheduledExams,
+  examSubmissions,
+  parentStudentRelations
 } from "@db/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
 import multer from "multer";
@@ -958,8 +965,7 @@ export function registerRoutes(app: Express): Server {
   app.get("/api/questions/stats", requireAuth, async (_req, res) => {
     try {
       const [{ total }] = await db
-        .select({
-          total: sql<number>`count(*)`,
+        .select({          total: sql<number>`count(*)`,
         })
         .from(questions);
 
